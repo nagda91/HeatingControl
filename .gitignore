@@ -1,0 +1,6 @@
+#Diroctories
+*~
+*obj
+.vs
+*git_hints.txt
+*.user

@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29230.47
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HeatingControl", "HeatingControl\HeatingControl.vcxproj", "{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Release|ARM = Release|ARM
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Debug|ARM.ActiveCfg = Debug|ARM
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Debug|ARM.Build.0 = Debug|ARM
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Debug|ARM.Deploy.0 = Debug|ARM
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.ActiveCfg = Release|ARM
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.Build.0 = Release|ARM
+		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.Deploy.0 = Release|ARM
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {49BFA85A-C802-4B10-AAAF-A121836A418F}
+	EndGlobalSection
+EndGlobal
