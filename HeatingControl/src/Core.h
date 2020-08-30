@@ -183,12 +183,12 @@ private:
 	int heatingMode, EXTkey;
 
 	//Uploading rules for vectors:
-	/*vector<int> &heatingDevices = {
+	/*vector<int> heatingDevices = {
 			0 - gasheater,
 			1 - housepump,
 			2 - boilerpump}*/
 	vector<int> heatingDevices;
-	/*vector<int> &heatingSensors = {
+	/*vector<int> heatingSensors = {
 			0 - house,
 			1 - heater,
 			2 - mainpipe,

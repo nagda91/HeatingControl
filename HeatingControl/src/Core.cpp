@@ -572,18 +572,52 @@ string Core::settingsFromFile(string x)
 						mainLog("Device got wrong name, could not be added");
 					}
 					else {
-						mainLog("Device added: " + name + ", GPIO: " + to_string(pin));
+						mainLog(to_string(Devs.getDeviceNumber(name) + 1) + ". Device added: " + name + ", GPIO: " + to_string(pin));
 					}
 
 				}
 			}
-			else if (row.find("-HS")) { 
-				row = row.substr(row.find_first_of(' ') + 1); 
-				vectorUploader(row, heatingSensors); 
-			}
-			else if (row.find("-HD")) { 
+			else if (row.find("-HS") != z) { 
 				row = row.substr(row.find_first_of(' ') + 1);
-				vectorUploader(row, heatingDevices); 
+				try
+				{
+					vectorUploader(row, heatingSensors);
+				}
+				catch (int e)
+				{
+					if (e = 1) {
+						mainLog("HeatingSensors settings: ", false);
+						for (size_t i = 0; i < heatingSensors.size(); i++) {
+							if (i != 0) mainLog(",", false, false);
+							mainLog(to_string(heatingSensors[i]), false, false);
+						}
+					}
+					else {
+						mainLog("HeatingSensors could not be uploaded!");
+					}
+				}
+				
+			}
+			else if (row.find("-HD") != z) {
+				row = row.substr(row.find_first_of(' ') + 1);
+				try
+				{
+					vectorUploader(row, heatingDevices);
+				}
+				catch (int e)
+				{
+					if (e = 1) {
+						mainLog("HeatingDevices settings: ", false);
+						for (size_t i = 0; i < heatingDevices.size(); i++) {
+							if (i != 0) mainLog(",", false, false);
+							mainLog(to_string(heatingDevices[i]), false, false);
+						}
+					}
+					else {
+						mainLog("HeatingDevices settings could not be uploaded!");
+					}
+				}
+				 
 			}
 
 		} while (!f.eof());
@@ -2187,7 +2221,7 @@ string Core::commFunc(string mes)
 		cout << "Uploaded sensors:" << endl;
 		for (size_t i = 0; i < temperatureSensors.size(); i++) {
 			if (i != 0) cout << "\n";
-			cout << temperatureSensors[i].getName() + "=" + to_string(temperatureSensors[i].getTemp());
+			cout << i + 1 << ". " << temperatureSensors[i].getName();
 		}
 		cout << "Current heating sensors settings: ";
 		for (size_t i = 0; i < heatingSensors.size(); i++) {
@@ -2261,7 +2295,7 @@ string Core::commFunc(string mes)
 		cout << "Uploaded sensors:" << endl;
 		for (size_t i = 0; i < temperatureSensors.size(); i++) {
 			if (i != 0) cout << "\n";
-			cout << temperatureSensors[i].getName() + "=" + to_string(temperatureSensors[i].getTemp());
+			cout << i + 1 << ". " << temperatureSensors[i].getName();
 		}
 		return "\n";
 	}
@@ -2270,7 +2304,7 @@ string Core::commFunc(string mes)
 		cout << "Current heating devices settings: ";
 		for (size_t i = 0; i < heatingDevices.size(); i++) {
 			if (i != 0) cout << ",";
-			cout << heatingSensors[i];
+			cout << heatingDevices[i];
 		}
 		cout << endl << "Uploaded Devices:" << endl;
 		cout <<  Devs.getDevicesData();
@@ -2706,7 +2740,6 @@ int Core::setExtTemp(int x) {
 
 int Core::vectorUploader(const string row, vector<int>& uVector)
 {
-
 	size_t lastOne = 0;
 
 	if (row.find(',') != size_t(-1)) {
