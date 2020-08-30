@@ -26,7 +26,7 @@ using namespace std;
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
 
-#define BROKER_ADDRESS "192.168.0.105"
+#define BROKER_ADDRESS "dummy"
 
 /////MQTT///////////////////////////////////////////////////////////////////////////////////
 Core::Core(const char* id, const char* host, int port, const char* user, const char* passw) : mosquittopp(id)
@@ -54,6 +54,7 @@ void Core::on_connect(int rc)
 	mainLog("on_Connect");
 
 	this->subscribe(clint_id, MQTT_TOPIC, 2);
+	// <extsensors> topic can be changed, but dont forget to use that topic in your wireless sensors' code
 	this->subscribe(clint_id, "extsensors", 2);
 
 	if (!rc)
@@ -576,8 +577,14 @@ string Core::settingsFromFile(string x)
 
 				}
 			}
-			else if (row.find("-HS")) vectorUploader(row, heatingSensors);
-			else if (row.find("-HD")) vectorUploader(row, heatingDevices);
+			else if (row.find("-HS")) { 
+				row = row.substr(row.find_first_of(' ') + 1); 
+				vectorUploader(row, heatingSensors); 
+			}
+			else if (row.find("-HD")) { 
+				row = row.substr(row.find_first_of(' ') + 1);
+				vectorUploader(row, heatingDevices); 
+			}
 
 		} while (!f.eof());
 		f.close();
@@ -2059,7 +2066,7 @@ string Core::commFunc(string mes)
 			if (x == 0) return("Heating mode set to: " + to_string(heatingMode));
 			else if (x == 0) return("Heating mode failed to set: " + to_string(heatingMode));
 			else {
-				return("Someting went wrong, heating mode tried to set: " + to_string(neu));
+				return("Something went wrong, heating mode tried to set: " + to_string(neu));
 			}
 		}
 	}
@@ -2158,7 +2165,7 @@ string Core::commFunc(string mes)
 			return  name + " device switced ON, from terminal.";
 		}
 		else {
-			return "You gave wrong state, it can be 0 or 1";
+			return "You gave wrong state, it can be 0(OFF) or 1(ON)";
 		}
 
 
@@ -2173,6 +2180,101 @@ string Core::commFunc(string mes)
 
 		return "\n";
 
+	}
+	else if (mes.find("setHeatingSensors") != npos) {
+
+		cout << endl;
+		cout << "Uploaded sensors:" << endl;
+		for (size_t i = 0; i < temperatureSensors.size(); i++) {
+			if (i != 0) cout << "\n";
+			cout << temperatureSensors[i].getName() + "=" + to_string(temperatureSensors[i].getTemp());
+		}
+		cout << "Current heating sensors settings: ";
+		for (size_t i = 0; i < heatingSensors.size(); i++) {
+			if (i != 0) cout << ",";
+			cout << heatingSensors[i];
+		}
+		cout << endl << "Give the new sensors\' numbers, separated with <,>: ";
+		string row;
+		cin >> row;
+		try
+		{
+			vectorUploader(row, heatingSensors);
+		}
+		catch (const int e)
+		{
+			if (e) { 
+				cout << "Sensors updated: "; 
+				for (size_t i = 0; i < heatingSensors.size(); i++) {
+					if (i != 0) cout << ",";
+					cout << heatingSensors[i];
+				}
+				cout << endl;
+			}
+			else {
+				cout << "Something went wrong" << endl;
+			}
+
+		}
+
+		return "\n";
+	}
+	else if (mes.find("setHeatingDevices") != npos) {
+
+	cout << endl;
+	cout << "Uploaded Devices:" << endl;
+	cout << Devs.getDevicesData();
+	cout << "Current heating devices settings: ";
+	for (size_t i = 0; i < heatingDevices.size(); i++) {
+		if (i != 0) cout << ",";
+		cout << heatingSensors[i];
+	}
+	cout << endl << "Give the new sensors\' numbers, separated with <,>: ";
+	string row;
+	cin >> row;
+	try
+	{
+		vectorUploader(row, heatingDevices);
+	}
+	catch (const int e)
+	{
+		if (e) {
+			cout << "Sensors updated: ";
+			cout << Devs.getDevicesData();
+		}
+		else {
+			cout << "Something went wrong" << endl;
+		}
+
+	}
+		
+		return "\n";
+	}
+	else if (mes.find("getHeatingSensors") != npos) {
+		cout << endl;
+		cout << "Current heating sensors settings: ";
+		for (size_t i = 0; i < heatingSensors.size(); i++) {
+			if (i != 0) cout << ",";
+			cout << heatingSensors[i];
+		}
+		cout << endl;
+		cout << "Uploaded sensors:" << endl;
+		for (size_t i = 0; i < temperatureSensors.size(); i++) {
+			if (i != 0) cout << "\n";
+			cout << temperatureSensors[i].getName() + "=" + to_string(temperatureSensors[i].getTemp());
+		}
+		return "\n";
+	}
+	else if (mes.find("getHeatingDevices") != npos) {
+		cout << endl;
+		cout << "Current heating devices settings: ";
+		for (size_t i = 0; i < heatingDevices.size(); i++) {
+			if (i != 0) cout << ",";
+			cout << heatingSensors[i];
+		}
+		cout << endl << "Uploaded Devices:" << endl;
+		cout <<  Devs.getDevicesData();
+		return "\n";
 	}
 
 	return "No matching command! type <help> for commands, pls.";
@@ -2402,11 +2504,11 @@ string Core::getWT()
 {
 	string x;
 	x = "WTs gasheater=";
-	x += minToTime(heaterWorkingTime);
+	x += minToTime(Devs["Gasheater"].getWorkingTime());
 	x += ",solar=";
-	x += minToTime(solarPumpWT);
+	x += minToTime(Devs["Solarpump"].getWorkingTime());
 	x += ",boiler=";
-	x += minToTime(boilerPumpWT);
+	x += minToTime(Devs["Boilerpump"].getWorkingTime());
 	return x;
 }
 
@@ -2605,7 +2707,7 @@ int Core::setExtTemp(int x) {
 int Core::vectorUploader(const string row, vector<int>& uVector)
 {
 
-	size_t lastOne = row.find_first_of(' ') + 1;
+	size_t lastOne = 0;
 
 	if (row.find(',') != size_t(-1)) {
 

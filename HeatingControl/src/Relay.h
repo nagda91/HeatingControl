@@ -34,7 +34,7 @@ public:
 private:
 
 	string name;
-	int workingTime, state, PIN, switchedON, changedByUserTime;
+	int workingTime = 0, state, PIN, switchedON, changedByUserTime;
 	bool changed;
 	vector<vector <int>> WTs;
 

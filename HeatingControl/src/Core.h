@@ -20,7 +20,7 @@
 #define MQTT_TOPIC "topic"
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
-#define WILL_MESSAGE "alert, thenewone disconnected!(will)"
+#define WILL_MESSAGE "alert, HeatingControl disconnected!(will)"
 //mqttReset() returns:
 #define COULDNOTDISCONNECT 1
 #define COULDNOTSTOPLOOP 2

@@ -24,7 +24,7 @@ using namespace std;
 
 int main() {
 
-	/////wiringPi/////
+	/////wiringPi///// its not necessaary, but good to be here
 	wiringPiSetup();
 	pinMode(0, OUTPUT);
 	pinMode(1, OUTPUT);
@@ -41,11 +41,11 @@ int main() {
 	class Core* iot_client;
 	//Connection data
 	char client_id[] = CLIENT_ID;
-	const char* USER = "thenewone";
-	const char* PASSW = "1991";
+	const char* USER = "dummy";
+	const char* PASSW = "dummy";
 	//int sadf = 13245;
 	//int* clint_id = &sadf;
-	char host[] = "192.168.0.105";
+	char host[] = "dummy";
 	int port = MQTT_PORT;
 	string topicString = MQTT_TOPIC;
 
@@ -61,10 +61,7 @@ int main() {
 	iot_client->loop_start();
 	////MQTT/////
 
-	//iot_client->basicFunc();
-
 	std::thread mainthread = iot_client->basicFuncthread();
-	//cout << "mainthread utan vagyunk" << endl;
 
 	string comm;
 	do
