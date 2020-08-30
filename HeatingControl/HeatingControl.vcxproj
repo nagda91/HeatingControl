@@ -10,6 +10,19 @@
       <Platform>ARM</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Devices.cpp" />
+    <ClCompile Include="src\Relay.cpp" />
+    <ClCompile Include="src\Core.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Temp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Devices.h" />
+    <ClInclude Include="src\Relay.h" />
+    <ClInclude Include="src\Core.h" />
+    <ClInclude Include="src\Temp.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{acc71aca-8b51-4601-9f8c-f238ac84a9b5}</ProjectGuid>
     <Keyword>Linux</Keyword>
@@ -36,9 +49,6 @@
     <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)bin_int\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
-  <ItemGroup>
-    <ClCompile Include="src\test.cpp" />
-  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Link>
       <LibraryDependencies>wiringPi;mosquittopp;pthread</LibraryDependencies>
