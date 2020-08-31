@@ -19,10 +19,10 @@ public:
 	vector<Relay> devices;
 
 	string getName(int);
-	int getDeviceNumber(string);//gives back the number of the devs name, if it exists
+	int getDeviceNumber(string&);//gives back the number of the devs name, if it exists
 	int getDevicesNumber();
-	int addDevice(string, int);
-	int adddDevice(string, int, int);
+	int addDevice(string, int, bool&);
+	//int adddDevice(string, int, int);
 	int delDevice(string);
 	string getDevicesData();
 	bool checkPIN(int);
@@ -34,11 +34,7 @@ public:
 
 private:
 
-	/*GPIOs
-	std::vector<int> availableGPIO{ 1, 2, 3, 5, 6, 7, 21, 22, 23, 24, 25, 26, 27, 28, 29 };
-	const std::vector<int> usableGPIO{ 1, 2, 3, 5, 6, 7, 21, 22, 23, 24, 25, 26, 27, 28, 29, 0 };
-	//-------------------
-	*/
+	
 
 };
 

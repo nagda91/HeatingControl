@@ -9,7 +9,7 @@
 #include <thread>
 #include <mosquittopp.h>
 #include <mosquitto.h>
-#include "Devices.h"
+//#include "Devices.h"
 #include "Relay.h"
 #include <thread>
 
@@ -52,6 +52,10 @@ public:
 	//destructor of a Core object
 	//clears the <tomb> vector, i should put some other vectors into it
 	~Core();
+
+	/*GPIOs - it will be usefull in the future
+	std::vector<int> availableGPIO{ 1, 2, 3, 5, 6, 7, 21, 22, 23, 24, 25, 26, 27, 28, 29 };
+	const std::vector<int> usableGPIO{ 1, 2, 3, 5, 6, 7, 21, 22, 23, 24, 25, 26, 27, 28, 29, 0 };*/
 
 	/*This function sets the log files' names, and the temperatures sensors' filenames and names
 	we have to give it a filename where we store the path to the files
@@ -160,8 +164,9 @@ private:
 	int meret, mainpipe, boiler1, boiler2, heater, house, chimney, solar, solarboiler, boilerMax;
 
 	vector<Temp> temperatureSensors;//temperatures vector
+	vector<Relay> Devices;//Devices vector
 
-	Devices Devs;
+	//Devices Devs;
 
 	//boiler ,ax temperature are collected int thios vector during a whole week
 	vector<vector<int>> boilerMaxofWeek;
@@ -174,7 +179,7 @@ private:
 	vector<string> vlog;
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
-	bool heating = false, OK = true, STOP = true, RESET = false;
+	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false;
 	int winterStart, winterEnd, nightStarttime, nightEndtime;
 	int solarDiff, houseDiff, whilehouseDiff, boilerDiff;
 	int onlyPumpchimneymin, onlyPump, afterCirculation;
@@ -376,6 +381,10 @@ private:
 	/*This function sets the Devices in a vector
 	The devices' parametrs are read from file, parameter is the file's path*/
 	int setDevices(string);
+
+	int getDevicesNr(string);
+
+	string getDevicesData();
 };
 
 #endif // SENSOR_H

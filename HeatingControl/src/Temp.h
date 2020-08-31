@@ -17,7 +17,7 @@ public:
 	int szam(string);
 	void setTemp(int);
 	void setName(string);
-	int setTempfromfile();
+	int setTempfromfile(bool&);
 	void setID(string);
 	string getName();
 	string getFilename();

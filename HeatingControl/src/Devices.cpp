@@ -20,7 +20,7 @@ string Devices::getName(int x) {
 	return devices[x].getName();
 }
 
-int Devices::getDeviceNumber(string name)
+int Devices::getDeviceNumber(string &name)
 {
 	for (size_t i = 0; i < devices.size(); i++) {
 		if (devices[i].getName() == name) {
@@ -36,13 +36,13 @@ int Devices::getDevicesNumber() {
 
 }
 
-int Devices::addDevice(string namex, int pinX) {
+int Devices::addDevice(string namex, int pinX, bool &TEST) {
 
 	//cout << "pinx: " << to_string(pinX) << endl;
 
 	//cout << "In addDevice(), namex: " << namex << /*", checkPIN(): " << checkPIN(pinX) <<*/ endl;
 	//cout << "addDevice, " << namex << " , " << to_string(pinX) << endl;
-	Relay z(namex, pinX);
+	Relay z(namex, pinX, TEST);
 
 	devices.push_back(z);
 
@@ -50,19 +50,19 @@ int Devices::addDevice(string namex, int pinX) {
 
 }
 
-int Devices::adddDevice(string namex, int wtX, int pinX) {
-
-	if (checkPIN(pinX)) {
-		//Relay z(namex, wtX, pinX);
-
-		//devices.push_back(z);
-
-		return OKI;
-	}
-	else {
-		return WRONG_PIN_NUMBER;
-	}
-}
+//int Devices::adddDevice(string namex, int wtX, int pinX) {
+//
+//	if (checkPIN(pinX)) {
+//		//Relay z(namex, wtX, pinX);
+//
+//		//devices.push_back(z);
+//
+//		return OKI;
+//	}
+//	else {
+//		return WRONG_PIN_NUMBER;
+//	}
+//}
 
 int Devices::delDevice(string nameX) {
 

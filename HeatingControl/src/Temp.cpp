@@ -74,11 +74,18 @@ void Temp::setName(string x) {
 	name = x;
 }
 
-int Temp::setTempfromfile() {
+int Temp::setTempfromfile(bool &Test) {
 	ifstream f;
 	string row;
 	//string filePath = "/sys/bus/w1/devices/" + oneWireID + "/w1_slave";
-	f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
+	//Real sensors path
+	//f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
+	//For testing wrong weather
+	if (!Test) f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
+	else { 
+		f.open(("/home/pi/Desktop/HeatingControl_test/" + oneWireID + "/w1_slave").c_str()); 
+	}
+
 	if (f.fail()) {
 		temp = 20201;
 		return 1;
@@ -112,6 +119,8 @@ int Temp::setTempfromfile() {
 		Degrees.push_back(temp);
 		if (temp > maxOfDay) maxOfDay = temp;
 		if (temp < minOfDay) minOfDay = temp;
+
+		if (Test) delay(650);
 
 		return 0;
 	}

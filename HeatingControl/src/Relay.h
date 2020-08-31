@@ -13,8 +13,8 @@ class Relay
 {
 public:
 	Relay();
-	Relay(string, int);
-	Relay(string, int, int);
+	Relay(string, int, bool&);
+	//Relay(string, int, int, bool&);
 	~Relay();
 
 	int getState();
@@ -29,14 +29,16 @@ public:
 	string getAVGWTstring();
 	string getWTs();
 	void setChanged();
+	void setStart(time_t);
+	int getStart();
 
 
 private:
 
 	string name;
-	int workingTime = 0, state, PIN, switchedON, changedByUserTime;
-	bool changed;
-	vector<vector <int>> WTs;
-
+	int state, PIN, changedByUserTime, START;
+	time_t workingTime = 0;
+	bool changed, *TEST;
+	vector<vector <time_t>> WTs;
 };
 

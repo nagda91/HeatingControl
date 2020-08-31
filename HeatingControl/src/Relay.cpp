@@ -4,6 +4,7 @@
 #include <time.h>
 #include <vector>
 #include <wiringPi.h>
+#include <cmath>
 
 using namespace std;
 
@@ -11,15 +12,18 @@ Relay::Relay()
 {
 	state = 0;
 	workingTime = 0;
+	START = 0;
 	PIN = -1;
 	changed = false;
 
 }
 
-Relay::Relay(string namex, int pinNumber)
+Relay::Relay(string namex, int pinNumber, bool &Test)
 {
 	name = namex;
 	workingTime = 0;
+	START = 0;
+	TEST = &Test;
 	PIN = pinNumber;
 	digitalWrite(PIN, HIGH);
 	changed = false;
@@ -111,37 +115,79 @@ string Relay::getName()
 
 int Relay::getWorkingTime()
 {
-	return workingTime;
+	return this->workingTime;
 }
 
 int Relay::ON() {
-	if (digitalRead(PIN) != 0) {
+
+	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
 		state = 0;
-		switchedON = time(0);
+		START = time(0);
 		return 0;
 	}
 	else {
-		return 1;
+		if (*TEST) {
+			state = 0;
+			cout << endl << "in Relay, ON() - STARTbefore: " << START << endl;
+			START = time(0);
+			cout << endl << "in Relay, ON() - STARTafter: " << START << endl;
+			return 0;
+		}
+		else { return -1; }
 	}
 }
 
 int Relay::OFF() {
+
+	if (digitalRead(PIN) != 1 && !*TEST) {
+		digitalWrite(PIN, HIGH);
+		state = 1;
+		int z = time(0) - START;
+		workingTime = workingTime + z;
+		vector<time_t> y;
+		y.push_back(START);
+		y.push_back(z);
+		WTs.push_back(y);
+		START = 0;
+		return z;
+	}
+	else {
+
+		if (*TEST) {
+			state = 1;
+			int z = time(0) - START;
+			workingTime = workingTime + z;
+			cout << endl << "in Relay, OFF() - START: " << START << endl;
+			cout << endl << "in Relay, OFF() - z: " << z << endl;
+			START = 0;
+			return z;
+		}
+		else { return -1; }
+	}
+}
+
+/*int Relay::OFF() {
 	if (digitalRead(PIN) != 1) {
 		digitalWrite(PIN, HIGH);
 		state = 1;
-		workingTime += time(0) - switchedON;
-		vector<int> y;
-		y.push_back(time(0));
+		workingTime += (time(0) - switchedON);
+		vector<time_t> y;
+		y.push_back(switchedON);
+		cout << endl << "in Relay, OFF()-time(0): " << time(0) << endl;
+		cout << endl << "in Relay, OFF()-switcedON: " << switchedON << endl;
 		y.push_back(time(0) - switchedON);
 		WTs.push_back(y);
 		switchedON = 0;
-		return time(0) - switchedON;
+		cout << endl << "in Relay, OFF(): " << (time(0) - switchedON) << endl;
+		cout << endl << "in Relay, OFF() - y[0]: " << y[0] << endl;
+		cout << endl << "in Relay, OFF() - y[1]: " << y[1] << endl;
+		return (time(0) - switchedON);		
 	}
 	else {
 		return -1;
 	}
-}
+}*/
 
 int Relay::getAVGWT() {
 
@@ -211,4 +257,9 @@ void Relay::setChanged()
 		changed = true;
 
 	}
+}
+
+int Relay::getStart()
+{
+	return START;
 }
