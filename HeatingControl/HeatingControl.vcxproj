@@ -11,14 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Devices.cpp" />
     <ClCompile Include="src\Relay.cpp" />
     <ClCompile Include="src\Core.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Temp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Devices.h" />
     <ClInclude Include="src\Relay.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Temp.h" />

@@ -18,7 +18,6 @@
 
 #include "Temp.h"
 #include "Core.h"
-//#include "Devices.h"
 #include "Relay.h"
 
 using namespace std;
@@ -26,7 +25,7 @@ using namespace std;
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
 
-#define BROKER_ADDRESS "192.168.0.105"
+#define BROKER_ADDRESS "dummy"
 
 /////MQTT///////////////////////////////////////////////////////////////////////////////////
 Core::Core(const char* id, const char* host, int port, const char* user, const char* passw) : mosquittopp(id)

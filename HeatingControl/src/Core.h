@@ -9,13 +9,10 @@
 #include <thread>
 #include <mosquittopp.h>
 #include <mosquitto.h>
-//#include "Devices.h"
 #include "Relay.h"
 #include <thread>
 
 //MQTT
-//#define CLIENT_ID "HeatingControl"
-//#define BROKER_ADDRESS "localhost"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
 #define MAX_PAYLOAD 50
