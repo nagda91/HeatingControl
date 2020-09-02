@@ -25,6 +25,7 @@ Relay::Relay(string namex, int pinNumber, bool &Test)
 	START = 0;
 	TEST = &Test;
 	PIN = pinNumber;
+	pinMode(PIN, OUTPUT);
 	digitalWrite(PIN, HIGH);
 	changed = false;
 	state = digitalRead(PIN);
@@ -119,30 +120,32 @@ int Relay::getWorkingTime()
 }
 
 int Relay::ON() {
-
+	cout << "in Relay, ON() - 123 "<< endl;
 	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
-		state = 0;
 		START = time(0);
 		return 0;
 	}
 	else {
-		if (*TEST) {
-			state = 0;
+		cout << "in Relay, ON() - 131 " << endl;
+		if (*TEST && START == 0) {
+			cout << "in Relay, ON() - 133 " << endl;state = 0;
 			cout << endl << "in Relay, ON() - STARTbefore: " << START << endl;
 			START = time(0);
 			cout << endl << "in Relay, ON() - STARTafter: " << START << endl;
 			return 0;
 		}
-		else { return -1; }
+		else { 
+			cout << "in Relay, ON() - 139 " << endl;
+			return 1; 
+		}
 	}
 }
 
 int Relay::OFF() {
 
 	if (digitalRead(PIN) != 1 && !*TEST) {
-		digitalWrite(PIN, HIGH);
-		state = 1;
+		digitalWrite(PIN, HIGH);state = 1;
 		int z = time(0) - START;
 		workingTime = workingTime + z;
 		vector<time_t> y;
@@ -154,8 +157,7 @@ int Relay::OFF() {
 	}
 	else {
 
-		if (*TEST) {
-			state = 1;
+		if (*TEST && START != 0) {
 			int z = time(0) - START;
 			workingTime = workingTime + z;
 			cout << endl << "in Relay, OFF() - START: " << START << endl;
@@ -163,7 +165,10 @@ int Relay::OFF() {
 			START = 0;
 			return z;
 		}
-		else { return -1; }
+		else { 
+			
+			return 0; 
+		}
 	}
 }
 

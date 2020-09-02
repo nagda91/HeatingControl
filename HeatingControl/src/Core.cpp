@@ -759,7 +759,7 @@ void Core::basicFunc() {
 					}
 					catch (string e)
 					{
-						//if (e != "0") log << e << endl;
+						if (TEST) cout << "Core - basicFunc - 1375" << endl;
 						if (e != "0") mainLog(e);
 					}
 					//log << solarFunc() << endl;
@@ -1361,8 +1361,11 @@ string Core::solarFunc(string deviceName) {
 			if (TEST) cout << "Core - solarFuncON - getStart:" << Devices[getDevicesNr(deviceName)].getStart() << endl;
 		}
 		catch (int e) {
-			if (e == 0) return "Solarpump set to ON!";
-			else { return 0; }
+			if (e == 0) return "Solarpump ON!";
+			else { 
+				if (TEST) cout << "Core - solarFuncON - 1366" << endl;
+				return "0"; 
+			}
 		}
 				
 		/*if (Devs[deviceName].ON() == 0) return "Solarpump set to ON!";
@@ -1370,12 +1373,12 @@ string Core::solarFunc(string deviceName) {
 	}
 	else {
 		try {
-			if (TEST) cout << "Core - solarFunc OFF- getStart:" << Devices[getDevicesNr(deviceName)].getStart() << endl;
+			if (TEST) cout << "Core - solarFunc OFF - 1376" << endl;
 			throw Devices[getDevicesNr(deviceName)].OFF();
 		}
 		catch (int e) {
-			if (e == -1) return "0";
-			else { return "Solarpump set OFF, was working " + to_string(secToMin(e)) + " mins."; }
+			if (e != 0) return "Solarpump OFF, worked " + to_string(secToMin(e)) + " mins.";
+			else { return "0"; }
 		}
 
 	}
@@ -1430,21 +1433,21 @@ string Core::setTimeDiffTemps() {
 		f.close();
 	}
 
-	mainLog("Times, differences and temperatures are uploaded!");
-	mainLog("winterStart -- " + to_string(winterStart));
-	mainLog("winterEnd -- " + to_string(winterEnd));
-	mainLog("nightStarttime -- " + to_string(nightStarttime));
-	mainLog("nightEndtime -- " + to_string(nightEndtime));
-	mainLog("solarDiff -- " + to_string(solarDiff));
-	mainLog("houseDiff -- " + to_string(houseDiff));
-	mainLog("whilehouseDiff -- " + to_string(whilehouseDiff));
-	mainLog("boilerDiff -- " + to_string(boilerDiff));
-	mainLog("onlyPumpchimneymin -- " + to_string(onlyPumpchimneymin));
-	mainLog("onlyPump -- " + to_string(onlyPump));
-	mainLog("afterCirculation -- " + to_string(afterCirculation));
-	mainLog("thermostatDay -- " + to_string(thermostatDay));
-	mainLog("thermostatNight -- " + to_string(thermostatNight));
-	mainLog("heaterMax -- " + to_string(heaterMax));
+	mainLog("Times, differences and temperatures are uploaded!",1,0);
+	mainLog("winterStart -- " + to_string(winterStart), 1, 0);
+	mainLog("winterEnd -- " + to_string(winterEnd), 1, 0);
+	mainLog("nightStarttime -- " + to_string(nightStarttime), 1, 0);
+	mainLog("nightEndtime -- " + to_string(nightEndtime), 1, 0);
+	mainLog("solarDiff -- " + to_string(solarDiff), 1, 0);
+	mainLog("houseDiff -- " + to_string(houseDiff), 1, 0);
+	mainLog("whilehouseDiff -- " + to_string(whilehouseDiff), 1, 0);
+	mainLog("boilerDiff -- " + to_string(boilerDiff), 1, 0);
+	mainLog("onlyPumpchimneymin -- " + to_string(onlyPumpchimneymin), 1, 0);
+	mainLog("onlyPump -- " + to_string(onlyPump), 1, 0);
+	mainLog("afterCirculation -- " + to_string(afterCirculation), 1, 0);
+	mainLog("thermostatDay -- " + to_string(thermostatDay), 1, 0);
+	mainLog("thermostatNight -- " + to_string(thermostatNight), 1, 0);
+	mainLog("heaterMax -- " + to_string(heaterMax), 1, 0);
 	return "0";
 }
 
