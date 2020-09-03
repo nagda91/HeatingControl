@@ -18,7 +18,6 @@ public:
 	~Relay();
 
 	int getState();
-	int getExpState();
 	int getPIN();
 	int getWorkingTime();
 	int ON();
@@ -28,7 +27,6 @@ public:
 	int getAVGWT();
 	string getAVGWTstring();
 	string getWTs();
-	void setChanged();
 	void setStart(time_t);
 	int getStart();
 
@@ -36,7 +34,7 @@ public:
 private:
 
 	string name;
-	int state, PIN, changedByUserTime, START;
+	int PIN, changedByUserTime, START;
 	time_t workingTime = 0;
 	bool changed, *TEST;
 	vector<vector <time_t>> WTs;

@@ -10,7 +10,6 @@ using namespace std;
 
 Relay::Relay()
 {
-	state = 0;
 	workingTime = 0;
 	START = 0;
 	PIN = -1;
@@ -28,8 +27,6 @@ Relay::Relay(string namex, int pinNumber, bool &Test)
 	pinMode(PIN, OUTPUT);
 	digitalWrite(PIN, HIGH);
 	changed = false;
-	state = digitalRead(PIN);
-
 }
 
 /*Relay::Relay(string namex, int pinNumber, int workingTimex = 0)
@@ -50,11 +47,6 @@ Relay::~Relay()
 int Relay::getState()
 {
 	return digitalRead(PIN);
-}
-
-int Relay::getExpState()
-{
-	return state;
 }
 
 int Relay::getPIN()
@@ -120,32 +112,24 @@ int Relay::getWorkingTime()
 }
 
 int Relay::ON() {
-	cout << "in Relay, ON() - 123 "<< endl;
 	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
 		START = time(0);
 		return 0;
 	}
 	else {
-		cout << "in Relay, ON() - 131 " << endl;
 		if (*TEST && START == 0) {
-			cout << "in Relay, ON() - 133 " << endl;state = 0;
-			cout << endl << "in Relay, ON() - STARTbefore: " << START << endl;
 			START = time(0);
-			cout << endl << "in Relay, ON() - STARTafter: " << START << endl;
 			return 0;
 		}
-		else { 
-			cout << "in Relay, ON() - 139 " << endl;
-			return 1; 
-		}
+		else { return 1; }
 	}
 }
 
 int Relay::OFF() {
 
 	if (digitalRead(PIN) != 1 && !*TEST) {
-		digitalWrite(PIN, HIGH);state = 1;
+		digitalWrite(PIN, HIGH);
 		int z = time(0) - START;
 		workingTime = workingTime + z;
 		vector<time_t> y;
@@ -160,15 +144,10 @@ int Relay::OFF() {
 		if (*TEST && START != 0) {
 			int z = time(0) - START;
 			workingTime = workingTime + z;
-			cout << endl << "in Relay, OFF() - START: " << START << endl;
-			cout << endl << "in Relay, OFF() - z: " << z << endl;
 			START = 0;
 			return z;
 		}
-		else { 
-			
-			return 0; 
-		}
+		else { return 0; }
 	}
 }
 
@@ -245,23 +224,6 @@ string Relay::getWTs()
 	}
 
 	return r;
-}
-
-void Relay::setChanged()
-{
-	if (changed) {
-		if ((time(0) - changedByUserTime) > 6000) {
-			if (state != digitalRead(PIN)) {
-				digitalWrite(PIN, state);
-				changed = false;
-			}
-		}
-	}
-	else {
-		changedByUserTime = time(0);
-		changed = true;
-
-	}
 }
 
 int Relay::getStart()

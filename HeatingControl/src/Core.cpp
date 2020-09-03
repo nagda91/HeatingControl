@@ -376,7 +376,7 @@ string Core::cmd(const struct mosquitto_message* cmdmsg, string mes)
 		return mes;
 	}
 	else if (mes.find("getvlog") != npos) {
-		send("topic", getVlog());
+		send("topic", getVlog(99));
 		mqttLog("cmd(), getVlog()");
 		return mes;
 	}
@@ -2115,7 +2115,7 @@ string Core::commFunc(string mes)
 	}
 	else if (mes.find("getvlog") != npos) {
 
-		return getVlog();
+		return getVlog(99);
 
 	}
 	else if (mes.find("addDevice") != npos) {
@@ -2393,7 +2393,7 @@ int Core::fileNameLog(string name, string kind)
 
 void Core::pushBackvLog(string* x)
 {
-	if (vlog.size() >= 24) {
+	if (vlog.size() >= 99) {
 
 		vector<string> v;
 
@@ -2411,20 +2411,28 @@ void Core::pushBackvLog(string* x)
 	}
 }
 
-string Core::getVlog()
+string Core::getVlog(size_t Rows)
 {
 	string x;
 
-	if (!vlog.empty()) {
-		for (size_t i = 0; i < vlog.size(); i++) {
-			x += vlog[i];
-		}
+	if (Rows >= 0 && !vlog.empty()) {
+		if (Rows < vlog.size()) {
+			for (size_t i = vlog.size() -Rows; i < vlog.size(); i++) {
+				x += vlog[i];
+			}
 
-		return x;
+			return x;
+		}
+		else if (Rows >= vlog.size()) {
+			for (size_t i = 0; i < vlog.size(); i++) {
+				x += vlog[i];
+			}
+
+			return x;
+
+		}
 	}
-	else {
-		return "vlog is empty!";
-	}
+	else { return "Log is empty or you gave invalid row number!"; }
 }
 
 void Core::mqttLog(string str) {

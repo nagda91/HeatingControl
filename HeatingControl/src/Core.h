@@ -252,7 +252,7 @@ private:
 	void pushBackvLog(string*);
 
 	/*This function gives back the 25 lines of vLog vector*/
-	string getVlog();
+	string getVlog(size_t rows = 24);
 
 	/*This function is used to logging the messages sent to and get from the MQTT brokere*/
 	void mqttLog(string str);
