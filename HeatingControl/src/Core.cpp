@@ -376,7 +376,7 @@ string Core::cmd(const struct mosquitto_message* cmdmsg, string mes)
 		return mes;
 	}
 	else if (mes.find("getvlog") != npos) {
-		send("topic", getVlog(99));
+		send("topic", getVlog());
 		mqttLog("cmd(), getVlog()");
 		return mes;
 	}
