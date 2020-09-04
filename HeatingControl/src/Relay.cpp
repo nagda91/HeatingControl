@@ -111,6 +111,12 @@ int Relay::getWorkingTime()
 	return this->workingTime;
 }
 
+string Relay::getLastWT()
+{
+	if (WTs.empty()) return "0";
+	else { return to_string(WTs[WTs.size()][0]); }
+}
+
 int Relay::ON() {
 	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
@@ -124,6 +130,7 @@ int Relay::ON() {
 		}
 		else { return 1; }
 	}
+	return 1;
 }
 
 int Relay::OFF() {
@@ -137,18 +144,17 @@ int Relay::OFF() {
 		y.push_back(z);
 		WTs.push_back(y);
 		START = 0;
-		return z;
+		return 0;
 	}
 	else {
-
 		if (*TEST && START != 0) {
-			int z = time(0) - START;
-			workingTime = workingTime + z;
+			workingTime = workingTime + time(0) - START;
 			START = 0;
-			return z;
+			return 0;
 		}
-		else { return 0; }
+		else { return 1; }
 	}
+	return 1;
 }
 
 /*int Relay::OFF() {
@@ -229,4 +235,10 @@ string Relay::getWTs()
 int Relay::getStart()
 {
 	return START;
+}
+
+void Relay::newDay()
+{
+	workingTime = 0;
+	WTs.clear();
 }

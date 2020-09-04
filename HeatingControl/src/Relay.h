@@ -20,6 +20,7 @@ public:
 	int getState();
 	int getPIN();
 	int getWorkingTime();
+	string getLastWT();
 	int ON();
 	int OFF();
 	int setPIN(int, vector<int>&);
@@ -27,8 +28,8 @@ public:
 	int getAVGWT();
 	string getAVGWTstring();
 	string getWTs();
-	void setStart(time_t);
 	int getStart();
+	void newDay();
 
 
 private:

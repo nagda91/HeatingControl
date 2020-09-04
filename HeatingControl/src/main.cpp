@@ -41,11 +41,11 @@ int main() {
 	class Core* iot_client;
 	//Connection data
 	char client_id[] = CLIENT_ID;
-	const char* USER = "dummy";
-	const char* PASSW = "dummy";
+	const char* USER = "thenewone";
+	const char* PASSW = "1991";
 	//int sadf = 13245;
 	//int* clint_id = &sadf;
-	char host[] = "dummy";
+	char host[] = "192.168.0.105";
 	int port = MQTT_PORT;
 	string topicString = MQTT_TOPIC;
 

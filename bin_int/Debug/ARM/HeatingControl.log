@@ -1,0 +1,9 @@
+﻿  Validating sources
+  Copying sources remotely to '192.168.0.105'
+  Validating architecture
+  Validating architecture
+  Starting remote build
+  Compiling sources:
+  Core.cpp
+D:\dev\HeatingControl\HeatingControl\src\Core.h(1,16): warning : extra tokens at end of #ifndef directive [enabled by default]
+D:\dev\HeatingControl\HeatingControl\src\Core.cpp(1117,7): warning : "/*" within comment [-Wcomment]

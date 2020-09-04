@@ -25,20 +25,11 @@ using namespace std;
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
 
-#define BROKER_ADDRESS "dummy"
+#define BROKER_ADDRESS "192.168.0.105"
 
 /////MQTT///////////////////////////////////////////////////////////////////////////////////
 Core::Core(const char* id, const char* host, int port, const char* user, const char* passw) : mosquittopp(id)
 {
-	meret = 0;
-	mainpipe = 0;
-	boiler1 = 1;
-	boiler2 = 2;
-	heater = 3;
-	house = 4;
-	chimney = 5;
-	solar = 6;
-	solarboiler = 7;
 	heatingMode = 1;
 
 	int keepalive = DEFAULT_KEEP_ALIVE;
@@ -503,17 +494,7 @@ int Core::mqttReset() {
 /////MQTT/////////////////////////////////////////////////////////////////////
 
 Core::Core() {
-	meret = 0;
-	mainpipe = 0;
-	boiler1 = 1;
-	boiler2 = 2;
-	heater = 3;
-	house = 4;
-	chimney = 5;
-	solar = 6;
-	solarboiler = 7;
-	//Temp wen;
-	//tomb.push_back(wen);
+
 }
 
 Core::~Core() {
@@ -589,7 +570,28 @@ string Core::settingsFromFile(string x)
 					if (e != 1) mainLog("HeatingDevices settings could not be uploaded!");
 				}
 			}
-
+			else if (row.find("-boilerS") != z) {
+				row = row.substr(row.find_first_of(' ') + 1);
+				try
+				{
+					vectorUploader(row, boilerHeatingDevicesSensors);
+				}
+				catch (int e)
+				{
+					if (e != 1) mainLog("BoilerHeatingDevicesSensors settings could not be uploaded!");
+				}
+			}
+			else if (row.find("-solarS") != z) {
+				row = row.substr(row.find_first_of(' ') + 1);
+				try
+				{
+					vectorUploader(row, solarDevicesSensors);
+				}
+				catch (int e)
+				{
+					if (e != 1) mainLog("SolarDevicesSensors settings could not be uploaded!");
+				}
+			}
 		} while (!f.eof());
 		f.close();
 	}
@@ -602,16 +604,28 @@ string Core::settingsFromFile(string x)
 	for (size_t i = 0; i < Devices.size(); i++) {
 		mainLog((to_string(i + 1) + ". " + Devices[i].getName() + " -- " + to_string(Devices[i].getPIN())),true,false);
 	}
-	mainLog("HeatingSensors settings: ", false);
+	mainLog("HeatingSensors settings(House, Heater, Mainpipe, Chimney): ", false);
 	for (size_t i = 0; i < heatingSensors.size(); i++) {
 		if (i != 0) mainLog(",", false, false);
 		mainLog(to_string(heatingSensors[i]), false, false);
 	}
 	mainLog("", true, false);
-	mainLog("HeatingDevices settings: ", false);
+	mainLog("HeatingDevices settings(Gasheater, Houspump, Boilerpump): ", false);
 	for (size_t i = 0; i < heatingDevices.size(); i++) {
 		if (i != 0) mainLog(",", false, false);
 		mainLog(to_string(heatingDevices[i]), false, false);
+	}
+	mainLog("", true, false);
+	mainLog("Solar heating settings(Solar, Boiler, Pump): ", false);
+	for (size_t i = 0; i < solarDevicesSensors.size(); i++) {
+		if (i != 0) mainLog(",", false, false);
+		mainLog(to_string(solarDevicesSensors[i]), false, false);
+	}
+	mainLog("", true, false);
+	mainLog("Boiler heating settings(Pipe, Boiler, Pump): ", false);
+	for (size_t i = 0; i < boilerHeatingDevicesSensors.size(); i++) {
+		if (i != 0) mainLog(",", false, false);
+		mainLog(to_string(boilerHeatingDevicesSensors[i]), false, false);
 	}
 	mainLog("", true, false);
 	return "0";
@@ -653,7 +667,7 @@ void Core::setTempsthread() {
 				OK = false;
 			}
 		}
-		isboilerMax();
+
 		if (dayOftheweek() == 1 && newWeek) {
 			newWeek = false;
 			tempsFilename = filename(tempsfilename);
@@ -673,10 +687,6 @@ void Core::setTempsthread() {
 
 		delay(1000);
 	}
-}
-
-int Core::getMeret() {
-	return meret;
 }
 
 Temp Core::operator[](int x) {
@@ -722,7 +732,7 @@ void Core::basicFunc() {
 	}*/
 
 	try {
-		throw settingsFromFile("/home/pi/projects/thenewone/bin/ARM/Release/settings.txt");
+		throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
 	}
 	catch (string e) {
 		if (e != "0") mainLog(e);
@@ -737,16 +747,13 @@ void Core::basicFunc() {
 
 	std::thread first = std::thread(&Core::setTempsthread, this);
 	delay(8000);
-	//std::thread second = std::thread(&Core::logThread, this);
-
-	//log.open(logFilename.c_str(), ios_base::app);
 
 	std::thread td_heatingFunc;
 
 	while (STOP) {
 
 		if (OK) {
-			if ((nightEndtime - avgHeatingTime()) < timeinMin() && timeinMin() < (nightStarttime - avgHeatingTime())) {
+			if ((nightEndtime - AVGheatingTime()) < timeinMin() && timeinMin() < (nightStarttime - AVGheatingTime())) {
 
 				//Day
 				thermostat = &thermostatDay;
@@ -755,41 +762,39 @@ void Core::basicFunc() {
 					//Summer day
 					try
 					{
-						throw solarFunc("Solarpump");
+						throw boilerFunc(solarDevicesSensors, solarDiff);
 					}
-					catch (string e)
+					catch (int e)
 					{
-						if (TEST) cout << "Core - basicFunc - 1375" << endl;
-						if (e != "0") mainLog(e);
+						if (e == 1) mainLog("Solarpump ON");
+						else if (e == 2) mainLog("Solarpump OFF, worked " + Core::Devices[Core::solarDevicesSensors[2]].Relay::getLastWT());
 					}
-					//log << solarFunc() << endl;
 				}
 				else {
 					//Winter day
 					if (td_heatingFunc.joinable()) {
 						td_heatingFunc.join();
 						heating = false;
-						//log << heatingFuncreturn << endl;
 						mainLog(heatingFuncreturn);
+						heatingTime.push_back(time(0) - heatingStartTime);
+						heatingStartTime = 0;
 					}
 					else {
 						if (!heating) {
-							//td_heatingFunc = std::thread(&Core::heaterFunc, this, &thermostatDay);
-
 							switch (heatingMode) {
 							case 1: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
-							case 2: td_heatingFunc = std::thread(&Core::heaterFunc_mode2, this, thermostat);
+							case 2: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
 							default: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 							}
-
+							heatingStartTime = time(0);
 							delay(500);
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
 								heating = false;
+								heatingStartTime = 0;
 								if (!heatingFuncreturn.empty()) {
-									//log << heatingFuncreturn << endl;
 									mainLog(heatingFuncreturn);
 									heatingFuncreturn.clear();
 								}
@@ -803,28 +808,28 @@ void Core::basicFunc() {
 					if (!heating) {
 						try
 						{
-							throw boilerFunc();
+							throw boilerFunc(boilerHeatingDevicesSensors, boilerDiff);
 						}
-						catch (string e)
+						catch (int e)
 						{
-							//if (e != "0") log << e << endl;
-							if (e != "0") mainLog(e);
+							if (e == 1) mainLog("Boilerpump ON");
+							else if (e == 2) mainLog("Boilerpump OFF, worked " + Core::Devices[Core::boilerHeatingDevicesSensors[2]].Relay::getLastWT());
 						}
 					};
 
 					if (450 < timeinMin() && timeinMin() < 1020) {
 						try
 						{
-							throw solarFunc("Solarpump");
+							throw boilerFunc(solarDevicesSensors, solarDiff);
 						}
-						catch (string e)
+						catch (int e)
 						{
-							//if (e != "0") log << e << endl;
-							if (e != "0") mainLog(e);
+							if (e == 1) mainLog("Solarpump ON");
+							else if (e == 2) mainLog("Solarpump OFF, worked " + Core::Devices[Core::solarDevicesSensors[2]].Relay::getLastWT());
 						}
 					}
 					else {
-						if (digitalRead(1) != 1) digitalWrite(1, HIGH);
+						Devices[solarDevicesSensors[2]].OFF();
 					}
 				};
 			}
@@ -832,7 +837,6 @@ void Core::basicFunc() {
 				//Night
 				thermostat = &thermostatNight;
 				if (winterEnd < month() && month() < winterStart) {
-					//winterEnd < month() && month() < winterStart
 					//Summer night
 				}
 				else {
@@ -840,27 +844,26 @@ void Core::basicFunc() {
 					if (td_heatingFunc.joinable()) {
 						td_heatingFunc.join();
 						heating = false;
-						//log << heatingFuncreturn << endl;
 						mainLog(heatingFuncreturn);
+						heatingTime.push_back(time(0) - heatingStartTime);
+						heatingStartTime = 0;
 					}
 					else {
 						if (!heating) {
-							//td_heatingFunc = std::thread(&Core::heaterFunc, this, &thermostatNight);
-
 							switch (heatingMode) {
 							case 1: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
-							case 2: td_heatingFunc = std::thread(&Core::heaterFunc_mode2, this, thermostat);
+							case 2: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
 							default: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 							}
-
+							heatingStartTime = time(0);
 							delay(500);
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
 								heating = false;
+								heatingStartTime = 0;
 								if (!heatingFuncreturn.empty()) {
-									//log << heatingFuncreturn << endl;
 									mainLog(heatingFuncreturn);
 									heatingFuncreturn.clear();
 								}
@@ -873,12 +876,13 @@ void Core::basicFunc() {
 					if (!heating) {
 						try
 						{
-							throw boilerFunc();
+							throw boilerFunc(boilerHeatingDevicesSensors, boilerDiff);
 						}
-						catch (string e)
+						catch (int e)
 						{
-							//if (e != "0") log << e << endl;
-							if (e != "0") mainLog(e);
+
+							if (e == 1) mainLog("Boilerpump ON");
+							else if (e == 2) mainLog("Boilerpump OFF, worked " + Core::Devices[Core::boilerHeatingDevicesSensors[2]].Relay::getLastWT());
 						}
 					}
 				}
@@ -887,82 +891,41 @@ void Core::basicFunc() {
 			/*"datum ; ido ; cso ; bojler teteje ; felso hocserelo ; kazan ; lakas ; kemeny ; napko. ; napk.bojler:"*/
 			if (dayOftheweek() != 0 && tempslogI == 1) tempslogI = 0;
 			if (dayOftheweek() == 0 && tempslogI == 0) {
-				//boilerMax
-				mainLog("Boiler maximums(0=Sunday):");
-				/*for (int i=0; i < boilerMaxofWeek.size(); i++) {
-					for (int j=0; j < day.size(); j++) {
-						//log << to_string(boilerMaxofWeek[i][j]);
-						mainLog(to_string(boilerMaxofWeek[i][j]));
-					}
-					//log << endl;
-					mainLog("");
-				}*/
-				for (size_t i = 0; i < boilerMaxofWeek.size(); i++) {
-					mainLog(to_string(boilerMaxofWeek[i][0]) + " - " + to_string(boilerMaxofWeek[i][1]));
-				}
-				boilerMaxofWeek.clear();
-				///////////
-				//log << "End: " << longtime();
-				//log.close();
 				mainLog("End");
 				logFilename = filename(logfilename);
-				//log.open(logFilename.c_str(), ios_base::app);
-				//log << "Start: " << longtime() << endl;
 				mainLog("Start");
 				tempslogI = 1;
 			}
 			//boilerMax set in vector every day
 			if (dayOftheweek() != thisDay) {
-				day.clear();
-				day.push_back(thisDay);
-				day.push_back(boilerMax);
-				boilerMaxofWeek.push_back(day);
 				thisDay = dayOftheweek();
-				mainLog("Yesterday the boiler max. was: " + to_string(boilerMax));
-				boilerMax = 0;
-				//log << "Today the soalrpump worked: " << to_string(solarPumpWT) << "sec" << endl;
-				mainLog("Yesterday the soalrpump worked: " + minToTime(solarPumpWT));
-				solarPumpWT = 0;
-				mainLog("Yesterday the boilerpump worked: " + minToTime(boilerPumpWT));
-				boilerPumpWT = 0;
-				//log << "Today the heater worked: " << to_string(heaterWorkingTime) << "sec" << endl;
-				mainLog("Yesterday the heater worked: " + minToTime(heaterWorkingTime));
-				heaterWorkingTime = 0;
+				
+				mainLog("Yesterday the soalrpump worked: " + minToTime(Devices[getDevicesNr("Solarpump")].getWorkingTime()));
+				mainLog("Yesterday the boilerpump worked: " + minToTime(Devices[getDevicesNr("Boilerpump")].getWorkingTime()));
+				mainLog("Yesterday the gasheater worked: " + minToTime(Devices[getDevicesNr("Gasheater")].getWorkingTime()));
 				mainLog("Gasheater working times each heating sessions:");
-				mainLog(getgasheaterWTs(), false, false);
-				gasheaterWTs.clear();
+				//mainLog(getgasheaterWTs(), true, false);
+				//gasheaterWTs.clear();
 
 				for (size_t i = 0; i < temperatureSensors.size(); i++) {
 					mainLog(temperatureSensors[i].EndOfDay());
 				}
-
 			}
 			delay(10500);
 		}//if(OK)
 		else {
-			//log << longtime() << " -- OK = false, one of the temperature sensor not working" << endl;
+			
 			if (td_heatingFunc.joinable()) {
 				td_heatingFunc.join();
 				heating = false;
+				heatingTime.push_back(time(0) - heatingStartTime);
+				heatingStartTime = 0;
 				mainLog(heatingFuncreturn);
 			}
 			mainLog("OK = false, one of the temperature sensor not working");
 			send("topic", "alert,OK = false");
 
 			for (size_t i = 0; i < Devices.size(); i++) 	Devices[i].OFF();
-
-			/*if (digitalRead(0) != 1) {
-				digitalWrite(0, HIGH);
-			}
-			if (digitalRead(1) != 1) {
-				digitalWrite(1, HIGH);
-			}
-			if (digitalRead(2) != 1) {
-				digitalWrite(2, HIGH);
-			}
-			if (digitalRead(3) != 1) {
-				digitalWrite(3, HIGH);
-			}*/
 
 			OK = true;
 
@@ -971,7 +934,7 @@ void Core::basicFunc() {
 
 				mainLog("Reset");
 				try {
-					throw settingsFromFile("/home/pi/projects/thenewone/bin/ARM/Release/settings.txt");
+					throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
 				}
 				catch (string e) {
 					if (e != "0") mainLog(e);
@@ -981,33 +944,21 @@ void Core::basicFunc() {
 				}
 				catch (string e) {
 					if (e != "0") mainLog(e);
-
 				}
-
 				RESET = false;
 			}
 			delay(10500);
 		}
 	}//while()
-	//log << "End: " << longtime();
-	first.join();
-	//second.join();
-	if (heating) td_heatingFunc.join();
-	mainLog("Today the soalrpump worked: " + minToTime(solarPumpWT));
-	mainLog("Today the boilerpump worked: " + minToTime(boilerPumpWT));
-	mainLog("Today the heater worked: " + minToTime(heaterWorkingTime));
-	mainLog("Boiler maximums(0=Sunday):");
 
-	for (size_t i = 0; i < boilerMaxofWeek.size(); i++) {
-		for (size_t j = 0; j < day.size(); j++) {
-			//log << to_string(boilerMaxofWeek[i][j]);
-			mainLog(to_string(i) + " - " + to_string(boilerMaxofWeek[i][j]));
-		}
-	}
-	boilerMaxofWeek.clear();
-	heaterWorkingTime = 0;
+	first.join();
+	if (heating) td_heatingFunc.join();
+
+	mainLog("Today the soalrpump worked: " + minToTime(Devices[getDevicesNr("Solarpump")].getWorkingTime()));
+	mainLog("Today the boilerpump worked: " + minToTime(Devices[getDevicesNr("Boilerpump")].getWorkingTime()));
+	mainLog("Today the heater worked: " + minToTime(Devices[getDevicesNr("Gasheater")].getWorkingTime()));
+	mainLog("Boiler maximums(0=Sunday):");
 	mainLog("End");
-	//log.close();
 }
 
 thread Core::basicFuncthread()
@@ -1018,49 +969,41 @@ thread Core::basicFuncthread()
 
 void Core::heaterFunc(int* therm) {
 
-	int start, status = 0, heatingTime = 0, mainPipeStartTemp, gastime = 0;
+	int start, status = 0, mainPipeStartTemp;
 
 	if (temperatureSensors[heatingSensors[0]].getTemp() < *therm - houseDiff) {//house heating
-
 		Devices[heatingDevices[2]].OFF();
 		start = time(0);
 		mainLog("Heating started, mode 1");
 		mainPipeStartTemp = temperatureSensors[heatingSensors[2]].getTemp();
 		heating = true;
-
 		do {
 			if (temperatureSensors[heatingSensors[3]].getTemp() > onlyPumpchimneymin) {//only housepump, becouse the chimney is hot
-
 				Devices[heatingDevices[1]].ON();
 				Devices[heatingDevices[0]].OFF();
-
 			}
 			else {//gasheater and housepump ON
 				if (temperatureSensors[heatingSensors[2]].getTemp() < onlyPump) {
-
 					Devices[heatingDevices[1]].ON();
 					Devices[heatingDevices[0]].ON();
 					status = 1;
-
 				}
 				else {//gasheater OFF, mainpipe < 50C
-
 					Devices[heatingDevices[1]].ON();
 					Devices[heatingDevices[0]].OFF();
-
 				}
 			}
 			delay(5000);
 
 			if (temperatureSensors[heatingSensors[2]].getTemp() < mainPipeStartTemp) mainPipeStartTemp = temperatureSensors[heatingSensors[2]].getTemp();
 
-			if (Devices[heatingDevices[0]].getState() == 0 && (time(0) - heatingTime) > 600 && temperatureSensors[heatingSensors[2]].getTemp() - mainPipeStartTemp <= 1500) {
-				sendTopic("alert,Heater is not working!(1043)");
-				mainLog("Heater is not working!(1044)");
+			if (Devices[heatingDevices[0]].getState() == 0 && (time(0) - start) > 600 && temperatureSensors[heatingSensors[2]].getTemp() - mainPipeStartTemp <= 1500) {
+				sendTopic("alert,Heater is not working!(1000)");
+				mainLog("Heater is not working!(1001)");
 			}
 
 			if (time(0) - start > 420 && temperatureSensors[heatingSensors[0]].getTemp() > * therm && temperatureSensors[heatingSensors[2]].getTemp() > onlyPump) {
-				mainLog("heating finished(mode 1, 1050), it lasted for " + to_string(time(0) - start));
+				mainLog("heating finished(mode 1, 1005), it lasted for " + to_string(time(0) - start));
 				if (status != 0) {
 					mainLog(" sec, with natural gas", false, false);
 					status = 0;
@@ -1074,7 +1017,7 @@ void Core::heaterFunc(int* therm) {
 
 		} while (temperatureSensors[heatingSensors[0]].getTemp() < *therm + whilehouseDiff);//dowhileEND
 
-		mainLog("heating finished(mode 1, 1066), it lasted: " + to_string(time(0) - start));
+		mainLog("heating finished(mode 1, 1019), it lasted: " + to_string(time(0) - start));
 		if (status != 0) {
 			mainLog(" sec, with natural gas", false, false);
 			status = 0;
@@ -1091,15 +1034,15 @@ there:
 		Devices[heatingDevices[0]].OFF();
 
 		if (heating != 0) {
-			mainLog("heaters temperature reached the allewed temperature(1087)");
+			mainLog("heaters temperature reached the allewed temperature(1036)");
 		}
 		else {
-			mainLog("heaters temperature reached the allewed temperature(1091)");
+			mainLog("heaters temperature reached the allewed temperature(1039)");
 		}
 	}
 	else {//heatertemp. < 60C;
 
-		Devices[heatingDevices[0]].ON();
+		Devices[heatingDevices[0]].ON();//boilerheating ON
 
 		if (temperatureSensors[heatingSensors[2]].getTemp() > afterCirculation && temperatureSensors[heatingSensors[3]].getTemp() < onlyPumpchimneymin) {
 			//aftercirculation
@@ -1126,17 +1069,11 @@ there:
 
 	}//else kazan > 60
 	// lakas > termosztat end
-there1:
-	//if (!r.empty()) heatingFuncreturn = r;
-	if (gastime != 0) {
-		vector<int> temp;
-		temp.push_back(timeinMin());
-		temp.push_back(gastime);
-		gasheaterWTs.push_back(temp);
-	}
+there1:;
+	
 }
 
-void Core::heaterFunc_mode2(int* therm)
+/*void Core::heaterFunc_mode2(int* therm)
 {
 	int start, status, heatingTime = 0, mainPipeStartTerm, gastime = 0;
 	string r;
@@ -1203,7 +1140,7 @@ void Core::heaterFunc_mode2(int* therm)
 							}
 							r = r + "; ";
 							goto there;
-						}*/
+						}
 
 					}
 					else {//gasheater OFF, mainpipe > 50C
@@ -1337,77 +1274,31 @@ there1:
 		//temp.push_back(gastime);
 		gasheaterWTs.push_back(temp);
 	}
-	/*there2:
-		digitalWrite(2, HIGH);
-		r = "Heating finished(mode2), becouse sensor(gasheater[EXT]) was not fresh, it lasted: " + to_string(time(0) - start);
-		if (status != 0) {
-			r = r + " sec, with natural gas";
-			status = 0;
-		}
-		else {
-			r = r + " sec, without natural gas";
-		}
-		r = r + "; ";
-		*/
-}
+}*/
 
-string Core::solarFunc(string deviceName) {
-
-	if (temperatureSensors[solar].getTemp() - solarDiff > temperatureSensors[solarboiler].getTemp()) {
-		
-		try {
-			if (TEST) cout << "Core - solarFuncON- getStart:" << Devices[getDevicesNr(deviceName)].getStart() << endl;
-			throw Devices[getDevicesNr(deviceName)].ON();
-			if (TEST) cout << "Core - solarFuncON - getStart:" << Devices[getDevicesNr(deviceName)].getStart() << endl;
-		}
+int Core::boilerFunc(vector<int>& v, int &diff) {
+	if (temperatureSensors[v[0]].getTemp() - diff > temperatureSensors[v[1]].getTemp()) {
+		try { throw Devices[v[2]].ON(); }
 		catch (int e) {
-			if (e == 0) return "Solarpump ON!";
-			else { 
-				if (TEST) cout << "Core - solarFuncON - 1366" << endl;
-				return "0"; 
-			}
-		}
-				
-		/*if (Devs[deviceName].ON() == 0) return "Solarpump set to ON!";
-		else { return "0"; }*/
-	}
-	else {
-		try {
-			if (TEST) cout << "Core - solarFunc OFF - 1376" << endl;
-			throw Devices[getDevicesNr(deviceName)].OFF();
-		}
-		catch (int e) {
-			if (e != 0) return "Solarpump OFF, worked " + to_string(secToMin(e)) + " mins.";
-			else { return "0"; }
-		}
-
-	}
-	return "0";
-}
-
-string Core::boilerFunc() {
-	if (temperatureSensors[mainpipe].getTemp() - boilerDiff > temperatureSensors[boiler2].getTemp()) {
-		if (digitalRead(0) != 0) {
-			digitalWrite(0, LOW);
-			boilerPumpStart = time(0);
-			return "boilerpump ON";
+			if (e == 0) return 1;
+			else { return 0; }
 		}
 	}
 	else {
-		if (digitalRead(0) != 1) {
-			digitalWrite(0, HIGH);
-			boilerPumpWT = boilerPumpWT + (time(0) - boilerPumpStart);
-			return "boilerpump OFF";
+		try { throw Devices[v[2]].OFF(); }
+		catch (int e) {
+			if (e == 0) return 2;
+			else { return 0; }
 		}
 	}
-	return "0";
+	return 0;
 }
 
 string Core::setTimeDiffTemps() {
 
 	string sor;
 	ifstream f;
-	f.open("/home/pi/projects/thenewone/bin/ARM/Release/timedifftemps.txt");
+	f.open("/home/pi/projects/HeatingControl/bin/ARM/Release/timedifftemps.txt");
 
 	if (f.fail()) return "Unable to open timedifftemps.txt, please look at readme.txt, :)";
 	else {
@@ -1454,13 +1345,10 @@ string Core::setTimeDiffTemps() {
 //Log functions
 int Core::timeinMin() {
 	struct tm* theTime;
-	int hour, min;
 	time_t tim;
 	time(&tim);
 	theTime = localtime(&tim);
-	hour = theTime->tm_hour;
-	min = theTime->tm_min;
-	return hour * 60 + min;
+	return theTime->tm_hour * 60 + theTime->tm_min;
 }
 
 int Core::timeinMin(string x) {
@@ -1634,15 +1522,6 @@ void Core::logThread() {
 	tempslog.close();
 }
 
-void Core::isboilerMax() {
-	if (temperatureSensors[boiler1].getTemp() > boilerMax) boilerMax = temperatureSensors[boiler1].getTemp();
-}
-
-int Core::getboilerMax()
-{
-	return boilerMax;
-}
-
 int Core::getSensorMax(string sensorName)
 {
 	return temperatureSensors[getSensorNumber(sensorName)].getMax();
@@ -1653,50 +1532,12 @@ int Core::getSensorMin(string sensorName)
 	return temperatureSensors[getSensorNumber(sensorName)].getMin();
 }
 
-string Core::getgasheaterWTs()
-{
-	string r;
-	if (gasheaterWTs.size() > 0) {
-		for (size_t i = 0; i < gasheaterWTs.size(); i++) {
-			r += to_string(gasheaterWTs[i][0]);
-			r += " - ";
-			r += to_string(gasheaterWTs[i][1]);
-			r += "\n";
-		}
-
-	}
-	else {
-		r = "No data(gasheaterWTs)\n";
-	}
-
-	return r;
-}
-
 string Core::getDeviceWTs(string deviceName)
 {
 	return Devices[getDevicesNr(deviceName)].getWTs();
 }
 
-int Core::avgHeatingTime()
-{
-	if (gasheaterWTs.size() > 0) {
-
-		double avg = 0;
-
-		for (size_t i = 0; i < gasheaterWTs.size(); i++) {
-			avg += gasheaterWTs[i][1];
-		}
-
-		avg = avg / gasheaterWTs.size();
-
-		return secToMin(&avg);
-	}
-	else {
-		return 0;
-	}
-}
-
-int Core::sqrtAvgHeatingTime()
+/*int Core::sqrtAvgHeatingTime()
 {
 	if (gasheaterWTs.size() > 0) {
 
@@ -1715,7 +1556,7 @@ int Core::sqrtAvgHeatingTime()
 	else {
 		return 0;
 	}
-}
+}*/
 
 string Core::commFunc(string mes)
 {
@@ -2099,7 +1940,8 @@ string Core::commFunc(string mes)
 		return("Heating mode: " + to_string(heatingMode));
 	}
 	else if (mes.find("getgasWT") != npos) {
-		return(getgasheaterWTs());
+		//return(getgasheaterWTs());
+		return "under construction";
 	}
 	else if (mes.find("getdata=") != npos) {
 		size_t neu = szam(mes.substr(mes.find('=') + 1));
@@ -2110,7 +1952,8 @@ string Core::commFunc(string mes)
 	}
 	else if (mes.find("getavght") != npos) {
 
-		return ("Avg: " + to_string(avgHeatingTime()) + ", sqrtAvg: " + to_string(sqrtAvgHeatingTime()));
+		//return ("Avg: " + to_string(avgHeatingTime()) + ", sqrtAvg: " + to_string(sqrtAvgHeatingTime()));
+		return ("Avg:, sqrtAvg: ");
 
 	}
 	else if (mes.find("getvlog") != npos) {
@@ -2669,6 +2512,11 @@ string Core::minToTime(int x) {
 	return to_string(hour) + ":" + to_string(minutes);
 }
 
+string Core::iToC(int x)
+{
+	return to_string(x) + " °C";
+}
+
 int Core::secToMin(double* x)
 {
 	return int(*x / 60);
@@ -2774,43 +2622,6 @@ int Core::vectorUploader(const string row, vector<int>& uVector)
 	return 1;
 }
 
-//RELAYS
-//included in settings function, not used at the moment
-/*int Core::setDevices(string filename) {
-
-	string row, name;
-	int pin;
-	size_t z = -1;
-	ifstream f;
-	f.open(filename.c_str());
-
-	while (!f.eof()) {
-		getline(f, row);
-		if (row.find("-d") != z) {
-			name = row.substr(row.find(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1);
-			pin = szam(row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(" ")));
-			try
-			{
-				throw Devices.addDevice(name, pin, TEST);
-			}
-			catch (int e)
-			{
-				if (e != 0) {
-					mainLog("Device got wrong name, could not be added");
-				}
-				else {
-					mainLog("Device added: " + name + ", GPIO: " + to_string(pin));
-				}
-
-			}
-		}
-	}
-
-	f.close();
-
-	return SUCCES;
-}*/
-
 int Core::getDevicesNr(string x) {
 
 	for (size_t i = 0; i < Devices.size(); i++) {
@@ -2831,4 +2642,16 @@ string Core::getDevicesData()
 	}
 
 	return ret;
+}
+
+int Core::AVGheatingTime()
+{
+	if (heatingTime.size() == 0) {
+		auto sum = 0;
+		for (size_t i = 0; i < heatingTime.size(); i++) {
+			sum += heatingTime[i];
+		}
+		return int(sum / heatingTime.size());
+	}
+	else { return 0; }
 }

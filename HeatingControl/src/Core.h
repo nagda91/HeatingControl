@@ -81,10 +81,6 @@ public:
 	*/
 	string setTimeDiffTemps();
 
-	//This function gives back the <tomb> vector's size
-	int getMeret();
-
-
 	Temp operator[](int);
 
 	/*This function is the core of the whole program
@@ -158,30 +154,20 @@ public:
 protected:
 
 private:
-	int meret, mainpipe, boiler1, boiler2, heater, house, chimney, solar, solarboiler, boilerMax;
 
 	vector<Temp> temperatureSensors;//temperatures vector
 	vector<Relay> Devices;//Devices vector
-
-	//Devices Devs;
-
-	//boiler ,ax temperature are collected int thios vector during a whole week
-	vector<vector<int>> boilerMaxofWeek;
-
-	//gasheater working times are collected in this vector during a day
-	vector<vector<int>> gasheaterWTs;
-
-	//lines which are written into the mainlog file are collected in this vector
-	//for MQTT, 25 lines, maybe we can call it from the command line
-	vector<string> vlog;
+	vector<string> vlog;//lines which are written into the mainlog file are collected in this vector
+	vector<time_t> heatingTime;//collects the heating thread duration
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
 	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false;
+	time_t heatingStartTime = 0;
+	// Settings
 	int winterStart, winterEnd, nightStarttime, nightEndtime;
 	int solarDiff, houseDiff, whilehouseDiff, boilerDiff;
-	int onlyPumpchimneymin, onlyPump, afterCirculation;
-	int thermostatDay = 21000, thermostatNight = 19000, *thermostat, heaterMax;
-	int heaterWorkingTime = 0, solarPumpWT = 0, housePumpWT = 0, boilerPumpWT = 0, solarPumpStart, boilerPumpStart;
+	int onlyPumpchimneymin, onlyPump, afterCirculation, heaterMax;
+	int thermostatDay = 21000, thermostatNight = 19000, *thermostat;
 	int heatingMode, EXTkey;
 
 	//Uploading rules for vectors:
@@ -190,12 +176,25 @@ private:
 			1 - housepump,
 			2 - boilerpump}*/
 	vector<int> heatingDevices;
+
 	/*vector<int> heatingSensors = {
 			0 - house,
 			1 - heater,
 			2 - mainpipe,
 			3 - chimney }*/
 	vector<int> heatingSensors;
+
+	/*vector<int> solarDevicesSensors = { 
+			0 - Solarpanel,
+			1 - Solarboiler,
+			2 - Solarpump}*/
+	vector<int> solarDevicesSensors;
+
+	/*vector<int>  = boilerHeatingDevicesSensors {
+			0 - Mainpipe,
+			1 - Boilermid,
+			2 - boilerpump}*/
+	vector<int> boilerHeatingDevicesSensors;
 
 	//MQTT
 	int sadf = 13245;
@@ -286,6 +285,10 @@ private:
 		minute of a day(int) converts to digit form time(string), 650->"10:50"*/
 	string minToTime(int x);
 
+	/* iToC() function:
+		minute of a day(int) converts to digit form time(string), 650->"10:50"*/
+	string iToC(int x);
+
 	/*This function converts sec.-s to minute, parameter can be double or integer*/
 	int secToMin(double*);
 	int secToMin(int);
@@ -299,35 +302,19 @@ private:
 
 	/*boiler heating function
 		using two temperatures sensors value, and a different value between them
-		and a relay for the pump*/
-	string boilerFunc();
-
-	/*solarpanel function
-	Totally same like boilerfunc(), but using different values in it*/
-	/*it using the new Devices obj. to control the pumps*/
-	string solarFunc(string);
+		and a relay for the pump
+		This function is esed for the solarheating and the pipe heating too*/
+	int boilerFunc(vector<int>&, int&);
 
 	//This function create a new filename with actual date, its called every startup, and every Sunday 0:00	
 	string filename(string);
-
-	//two old function, will be deleted
-	void isboilerMax();//not necessary
-	int getboilerMax();//not necessary
 
 	/*These two functions look at is the new value is the lowest or the biggest every day, and every temperature update*/
 	int getSensorMax(string);
 	int getSensorMin(string);
 
-
-	string getgasheaterWTs();//should be deleted
-
 	/*NEW function, it can give back the given device's working times as string in sec.*/
 	string getDeviceWTs(string);
-
-	/*This function gives back the average working times of the gasheater
-	its needed when changing night to day part of the day*/
-	int avgHeatingTime();//average heating time in minutes
-	int sqrtAvgHeatingTime();//square average heating time in minutes
 
 	/* changeInFile() function:
 		if one of the TDTs change, it can be called to change it in the file too*/
@@ -351,12 +338,12 @@ private:
 
 	/*house heating - mode 2
 	It works in a separated thread*/
-	void heaterFunc_mode2(int*);
+	//void heaterFunc_mode2(int*);
 
 	//External temperature sensors
 
 	/*This function adds a new external sensor to the vector
-	It works only from terminal
+	These work only from terminal
 	<name> is the sensors name which will be sent in the update request message*/
 	int addExtTempSensor(string name);
 
@@ -373,15 +360,13 @@ private:
 	heatingSensors and heatingDevices*/
 	int vectorUploader(const string, vector<int>&);
 
-	//############ RELAYS ################
-
-	/*This function sets the Devices in a vector
-	The devices' parametrs are read from file, parameter is the file's path*/
-	int setDevices(string);
+	//############ Devacis ################
 
 	int getDevicesNr(string);
 
 	string getDevicesData();
+
+	int AVGheatingTime();
 };
 
 #endif // SENSOR_H
