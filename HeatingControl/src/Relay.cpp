@@ -111,10 +111,14 @@ int Relay::getWorkingTime()
 	return this->workingTime;
 }
 
-string Relay::getLastWT()
+int Relay::getLastWT()
 {
-	if (WTs.empty()) return "0";
-	else { return to_string(WTs[WTs.size()][0]); }
+	if (WTs.empty()) {
+		return 0;
+	}
+	else { 
+		return WTs[WTs.size()-1][1]; 
+	}
 }
 
 int Relay::ON() {
@@ -137,11 +141,10 @@ int Relay::OFF() {
 
 	if (digitalRead(PIN) != 1 && !*TEST) {
 		digitalWrite(PIN, HIGH);
-		int z = time(0) - START;
-		workingTime = workingTime + z;
+		workingTime = workingTime + time(0) - START;
 		vector<time_t> y;
 		y.push_back(START);
-		y.push_back(z);
+		y.push_back(time(0) - START);
 		WTs.push_back(y);
 		START = 0;
 		return 0;

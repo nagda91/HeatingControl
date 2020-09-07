@@ -14,13 +14,12 @@ class Relay
 public:
 	Relay();
 	Relay(string, int, bool&);
-	//Relay(string, int, int, bool&);
 	~Relay();
 
 	int getState();
 	int getPIN();
 	int getWorkingTime();
-	string getLastWT();
+	int getLastWT();
 	int ON();
 	int OFF();
 	int setPIN(int, vector<int>&);

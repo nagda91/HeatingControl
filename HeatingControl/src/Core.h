@@ -360,13 +360,15 @@ private:
 	heatingSensors and heatingDevices*/
 	int vectorUploader(const string, vector<int>&);
 
-	//############ Devacis ################
+	//############ Devices ################
 
 	int getDevicesNr(string);
 
 	string getDevicesData();
 
 	int AVGheatingTime();
+
+	int deleteDevice(string);
 };
 
 #endif // SENSOR_H
