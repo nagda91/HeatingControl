@@ -6,3 +6,6 @@
 *.user
 *.txt
 bin_int
+*.tlog
+*.log
+*.lastbuildstate
