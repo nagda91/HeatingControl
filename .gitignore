@@ -5,8 +5,3 @@
 *git_hints.txt
 *.user
 *.txt
-bin_int
-*.tlog
-*.log
-*.lastbuildstate
-*ARM
