@@ -19,3 +19,5 @@ Setting up the system:
                                 1-wire set up
                                 WiringPi library
                                 SSH
+
+To be continued...
