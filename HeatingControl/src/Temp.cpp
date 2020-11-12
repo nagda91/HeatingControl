@@ -13,7 +13,6 @@ using namespace std;
 Temp::Temp()
 {
 	temp = 15000;
-	temp2 = 13000;
 	EXT = false;
 	FRESH = false;
 	sameCounter = 0;

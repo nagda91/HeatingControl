@@ -15,6 +15,9 @@
 #define CLIENT_ID "HeatingControl"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
+#define MQTT_USER "USER"
+#define MQTT_PWD "PASSWORD"
+//#define SETTINGS_FILE "/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
 
 //int mainpipe, boiler1, boiler2, heater, house, chimney, solar, solarboiler;
 
@@ -38,14 +41,38 @@ int main() {
 
 	////MQTT/////
 
+
 	class Core* iot_client;
 	//Connection data
 	char client_id[] = CLIENT_ID;
-	const char* USER = "thenewone";
-	const char* PASSW = "1991";
+	/*string mqttSet, mqttuser, mqttpwd;
+	ifstream settings;
+	settings.open(SETTINGS_FILE);
+	if (settings.fail()) cout << "Could not open the settings file! :(\n";
+	else {
+		string mqttSet;
+		do {
+
+			getline(settings, mqttSet);
+			if(mqttSet.find("#") != -1) getline(settings, mqttSet);
+			if (mqttSet.find("-mqttUSER") != -1) {
+				mqttuser = mqttSet.substr(mqttSet.find_first_of(' ') + 1, mqttSet.length()- mqttSet.find_first_of(' '));
+				cout << "MQTT username: " << mqttuser << "MMM" << endl;
+			}
+			else if (mqttSet.find("-mqttPWD") != -1) {
+				mqttpwd = mqttSet.substr(mqttSet.find_first_of(' ') + 1, mqttSet.length() - mqttSet.find_first_of(' '));
+				cout << "MQTT password: " << mqttpwd << "MMM" << endl;
+			}
+
+		} while (!settings.eof() || (!mqttuser.empty() && !mqttpwd.empty()));
+
+	}*/
+
+	const char* USER = MQTT_USER;
+	const char* PASSW = MQTT_PWD;
 	//int sadf = 13245;
 	//int* clint_id = &sadf;
-	char host[] = "192.168.105";
+	char host[] = "localhost";
 	int port = MQTT_PORT;
 	string topicString = MQTT_TOPIC;
 

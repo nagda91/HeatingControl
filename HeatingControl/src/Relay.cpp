@@ -130,6 +130,7 @@ int Relay::ON() {
 	else {
 		if (*TEST && START == 0) {
 			START = time(0);
+			//cout << name << " - ON" << endl;
 			return 0;
 		}
 		else { return 1; }
@@ -153,9 +154,9 @@ int Relay::OFF() {
 		if (*TEST && START != 0) {
 			workingTime = workingTime + time(0) - START;
 			START = 0;
+			//cout << name << " - OFF" << endl;
 			return 0;
 		}
-		else { return 1; }
 	}
 	return 1;
 }

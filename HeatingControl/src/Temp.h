@@ -45,7 +45,6 @@ private:
 	string name;
 	int number;
 	int temp;
-	int temp2;
 	string oneWireID;
 	bool EXT;
 	int FRESH, WORKING;

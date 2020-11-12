@@ -24,8 +24,7 @@ using namespace std;
 
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
-
-#define BROKER_ADDRESS "192.168.105"
+#define BROKER_ADDRESS "localhost"
 
 /////MQTT///////////////////////////////////////////////////////////////////////////////////
 Core::Core(const char* id, const char* host, int port, const char* user, const char* passw) : mosquittopp(id)
@@ -154,7 +153,7 @@ string Core::cmd(const struct mosquitto_message* cmdmsg, string mes)
 		return mes;
 	}
 	else if (mes.find("wS") != npos) {
-		cout << "cmd(), wS()";
+		//cout << "cmd(), wS()";
 		int neu = szam(mes.substr(mes.find('=') + 1));
 		string rep;
 		if (neu < 0 || neu > 11) {
@@ -491,6 +490,8 @@ int Core::mqttReset() {
 	}
 	return 0;
 }
+
+
 /////MQTT/////////////////////////////////////////////////////////////////////
 
 Core::Core() {
@@ -751,10 +752,9 @@ void Core::basicFunc() {
 	std::thread td_heatingFunc;
 
 	while (STOP) {
-
 		if (OK) {
-			if ((nightEndtime - AVGheatingTime()) < timeinMin() && timeinMin() < (nightStarttime - AVGheatingTime())) {
-
+			if ((nightEndtime - Devices[heatingDevices[0]].getAVGWT()) < timeinMin() && timeinMin() < (nightStarttime - Devices[heatingDevices[0]].getAVGWT())) {
+	
 				//Day
 				thermostat = &thermostatDay;
 
@@ -906,7 +906,7 @@ void Core::basicFunc() {
 				}
 				for (auto&& i : temperatureSensors) { mainLog(i.EndOfDay()); }
 			}
-			delay(10500);
+			delay(8500);
 		}//if(OK)
 		else {
 			
@@ -928,12 +928,12 @@ void Core::basicFunc() {
 				temperatureSensors.clear();
 
 				mainLog("Reset");
-				try {
+				/*try {
 					throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
 				}
 				catch (string e) {
 					if (e != "0") mainLog(e);
-				}
+				}*/
 				try {
 					throw setTimeDiffTemps();
 				}
@@ -942,7 +942,7 @@ void Core::basicFunc() {
 				}
 				RESET = false;
 			}
-			delay(10500);
+			delay(8500);
 		}
 	}//while()
 
@@ -961,6 +961,8 @@ thread Core::basicFuncthread()
 void Core::heaterFunc(int* therm) {
 
 	int start, status = 0, mainPipeStartTemp;
+
+	if (DeBuG) cout << "Termostat: " << *therm << endl;
 
 	if (temperatureSensors[heatingSensors[0]].getTemp() < *therm - houseDiff) {//house heating
 		Devices[heatingDevices[2]].OFF();
@@ -994,13 +996,13 @@ void Core::heaterFunc(int* therm) {
 			}
 
 			if (time(0) - start > 420 && temperatureSensors[heatingSensors[0]].getTemp() > * therm && temperatureSensors[heatingSensors[2]].getTemp() > onlyPump) {
-				mainLog("heating finished(mode 1, 1005), it lasted for " + to_string(time(0) - start));
+				mainLog("heating finished(mode 1, 1005), it lasted for " + to_string(time(0) - start), false, true);
 				if (status != 0) {
-					mainLog(" sec, with natural gas", false, false);
+					mainLog(" sec, with natural gas", true, false);
 					status = 0;
 				}
 				else {
-					mainLog(" sec, without natural gas", false, false);
+					mainLog(" sec, without natural gas", true, false);
 				}
 				goto there;
 			}
@@ -1008,13 +1010,15 @@ void Core::heaterFunc(int* therm) {
 
 		} while (temperatureSensors[heatingSensors[0]].getTemp() < *therm + whilehouseDiff);//dowhileEND
 
-		mainLog("heating finished(mode 1, 1019), it lasted: " + to_string(time(0) - start));
+		mainLog("heating finished(mode 1, 1019), it lasted: " + to_string(time(0) - start),false, true);
+		Devices[heatingDevices[1]].OFF();
+		Devices[heatingDevices[0]].OFF();
 		if (status != 0) {
-			mainLog(" sec, with natural gas", false, false);
+			mainLog(" sec, with natural gas", true, false);
 			status = 0;
 		}
 		else {
-			mainLog(" sec, without natural gas", false, false);
+			mainLog(" sec, without natural gas", true, false);
 		}
 	}
 	//lakas > termosztat
@@ -1033,34 +1037,37 @@ there:
 	}
 	else {//heatertemp. < 60C;
 
-		Devices[heatingDevices[0]].ON();//boilerheating ON
+		//Devices[heatingDevices[2]].ON();//boilerheating ON
 
 		if (temperatureSensors[heatingSensors[2]].getTemp() > afterCirculation && temperatureSensors[heatingSensors[3]].getTemp() < onlyPumpchimneymin) {
 			//aftercirculation
-
-			Devices[heatingDevices[1]].ON();
-
-			if (heating != 0)	mainLog("aftercirculation ON", false, false);
+			if (!aCirc) {
+				Devices[heatingDevices[1]].ON();
+				mainLog("aftercirculation ON");
+				aCirc = true;
+			}
+			/*if (heating != 0)	mainLog("aftercirculation ON", false, false);
 			else {
 				mainLog("aftercirculation ON", false, false);
-			}
+			}*/
 
 		}
 		else {//stop aftercirculation
 
-			Devices[heatingDevices[1]].OFF();
-			if (heating != 0) {
-				mainLog("no aftercirculation");
-			}
-			else {
+			if (aCirc) {
+				Devices[heatingDevices[1]].OFF();
 				mainLog("aftercirculation OFF");
+				aCirc = false;
 			}
+			
 
 		}
 
 	}//else kazan > 60
 	// lakas > termosztat end
-there1:;
+there1:
+	Devices[heatingDevices[1]].OFF();
+	Devices[heatingDevices[0]].OFF();
 	
 }
 
@@ -1442,6 +1449,7 @@ string Core::tempslogFirstRow()
 	return x;
 }
 
+//Nincs használva
 void Core::logThread() {
 	int tempslogI = 1;
 	ofstream web, tempslog;
@@ -1656,6 +1664,9 @@ string Core::commFunc(string mes)
 		return getThermd();
 	}
 	else if (mes.find("getwts") != npos) {
+		return newGetWT();
+	}
+	else if (mes.find("getwwts") != npos) {
 		return getWT();
 	}
 	else if (mes.find("gettdt") != npos) {
@@ -2133,10 +2144,10 @@ string Core::commFunc(string mes)
 	}
 	else if (mes.find("TESTOFF") != npos) {
 		TEST = false;
-		mainLog("TEST mode ON");
+		mainLog("TEST mode OFF");
 		return "TEST mode OFF";
 	}
-	else if (mes.find("setSolarSetings") != npos) {
+	else if (mes.find("setSolarSettings") != npos) {
 
 		cout << endl;
 		cout << "Uploaded sensors:" << endl;
@@ -2412,11 +2423,12 @@ string Core::getWT()
 {
 	string x;
 	x = "WTs gasheater=";
-	x += minToTime(Devices[getDevicesNr("Gasheater")].getWorkingTime());
+	//x += minToTime(Devices[getDevicesNr("Gasheater")].getWorkingTime());
+	x += minToTime(Devices[1].getWorkingTime());
 	x += ",solar=";
-	x += minToTime(Devices[getDevicesNr("Solarpump")].getWorkingTime());
+	x += minToTime(Devices[0].getWorkingTime());
 	x += ",boiler=";
-	x += minToTime(Devices[getDevicesNr("Boilerpump")].getWorkingTime());
+	x += minToTime(Devices[3].getWorkingTime());
 	return x;
 }
 

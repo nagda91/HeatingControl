@@ -36,6 +36,7 @@
 //Other stuff
 #define MAINLOGFILEPATH "/home/pi/Desktop/log/mainlogfilenames.txt";
 #define TEMPSLOGFILEPATH "/home/pi/Desktop/log/tempslogfilenames.txt";
+#define SETTINGS_FILE "/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
 
 class Core : public mosqpp::mosquittopp, Temp
 {
@@ -161,7 +162,8 @@ private:
 	vector<time_t> heatingTime;//collects the heating thread duration
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
-	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false;
+	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc=false;
+	bool DeBuG = false;
 	time_t heatingStartTime = 0;
 	// Settings
 	int winterStart, winterEnd, nightStarttime, nightEndtime;
