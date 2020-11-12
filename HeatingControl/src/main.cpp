@@ -15,7 +15,7 @@
 #define CLIENT_ID "HeatingControl"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
-#define MQTT_USER "USER"
+#define MQTT_USER "USERNAME"
 #define MQTT_PWD "PASSWORD"
 //#define SETTINGS_FILE "/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
 

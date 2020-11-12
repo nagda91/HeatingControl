@@ -1043,6 +1043,7 @@ there:
 			//aftercirculation
 			if (!aCirc) {
 				Devices[heatingDevices[1]].ON();
+				digitalWrite(3, LOW);
 				mainLog("aftercirculation ON");
 				aCirc = true;
 			}
@@ -1056,6 +1057,7 @@ there:
 
 			if (aCirc) {
 				Devices[heatingDevices[1]].OFF();
+				digitalWrite(3, HIGH);
 				mainLog("aftercirculation OFF");
 				aCirc = false;
 			}
@@ -1066,7 +1068,7 @@ there:
 	}//else kazan > 60
 	// lakas > termosztat end
 there1:
-	Devices[heatingDevices[1]].OFF();
+	if(!aCirc) Devices[heatingDevices[1]].OFF();
 	Devices[heatingDevices[0]].OFF();
 	
 }
