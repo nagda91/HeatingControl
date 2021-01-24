@@ -162,8 +162,8 @@ private:
 	vector<time_t> heatingTime;//collects the heating thread duration
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
-	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc=false;
-	bool DeBuG = false;
+	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc = false, heaterLimit = false;
+	bool DeBuG = false, relayDebug = false;
 	time_t heatingStartTime = 0;
 	// Settings
 	int winterStart, winterEnd, nightStarttime, nightEndtime;

@@ -15,8 +15,8 @@
 #define CLIENT_ID "HeatingControl"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
-#define MQTT_USER "USERNAME"
-#define MQTT_PWD "PASSWORD"
+#define MQTT_USER "thenewone"
+#define MQTT_PWD "1991"
 //#define SETTINGS_FILE "/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
 
 //int mainpipe, boiler1, boiler2, heater, house, chimney, solar, solarboiler;

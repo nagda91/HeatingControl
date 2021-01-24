@@ -543,7 +543,7 @@ string Core::settingsFromFile(string x)
 				name = row.substr(row.find(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1);
 				pin = szam(row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(" ")));
 
-				Relay newRelay = Relay(name, pin, TEST);
+				Relay newRelay = Relay(name, pin, TEST, relayDebug);
 
 				Devices.push_back(newRelay);
 
@@ -1023,27 +1023,28 @@ void Core::heaterFunc(int* therm) {
 	}
 	//lakas > termosztat
 there:
-	if (temperatureSensors[heatingSensors[1]].getTemp() > heaterMax) {//heatertemp. is higher then allowed
+	if (temperatureSensors[heatingSensors[1]].getTemp() > heaterMax) {//heatertemp. is higher than allowed
 
-		Devices[heatingDevices[1]].ON();
 		Devices[heatingDevices[0]].OFF();
 
-		if (heating != 0) {
-			mainLog("heaters temperature reached the allewed temperature(1036)");
+		if (!heaterLimit && Devices[heatingDevices[1]].getState()) {
+			Devices[heatingDevices[1]].ON();
+			heaterLimit = true;
+			mainLog("heaters temperature reached the allowed temperature(1036)");
 		}
-		else {
-			mainLog("heaters temperature reached the allewed temperature(1039)");
-		}
+	
 	}
 	else {//heatertemp. < 60C;
 
 		//Devices[heatingDevices[2]].ON();//boilerheating ON
 
+		heaterLimit = false;
+
 		if (temperatureSensors[heatingSensors[2]].getTemp() > afterCirculation && temperatureSensors[heatingSensors[3]].getTemp() < onlyPumpchimneymin) {
 			//aftercirculation
 			if (!aCirc) {
 				Devices[heatingDevices[1]].ON();
-				digitalWrite(3, LOW);
+				//digitalWrite(3, LOW);
 				mainLog("aftercirculation ON");
 				aCirc = true;
 			}
@@ -1057,7 +1058,7 @@ there:
 
 			if (aCirc) {
 				Devices[heatingDevices[1]].OFF();
-				digitalWrite(3, HIGH);
+				//digitalWrite(3, HIGH);
 				mainLog("aftercirculation OFF");
 				aCirc = false;
 			}
@@ -1068,7 +1069,7 @@ there:
 	}//else kazan > 60
 	// lakas > termosztat end
 there1:
-	if(!aCirc) Devices[heatingDevices[1]].OFF();
+	if(!aCirc && !heaterLimit) Devices[heatingDevices[1]].OFF();
 	Devices[heatingDevices[0]].OFF();
 	
 }
@@ -1957,7 +1958,7 @@ string Core::commFunc(string mes)
 	else if (mes.find("getavght") != npos) {
 
 		//return ("Avg: " + to_string(avgHeatingTime()) + ", sqrtAvg: " + to_string(sqrtAvgHeatingTime()));
-		return ("Avg:, sqrtAvg: ");
+		return ("Average heating time today: " + to_string(Devices[heatingDevices[0]].getAVGWT()) + " mins");
 
 	}
 	else if (mes.find("getvlog") != npos) {
@@ -1975,7 +1976,7 @@ string Core::commFunc(string mes)
 		cin >> gpio;
 		GPIO = szam(gpio);
 
-		Relay newRelay = Relay(deviceName, GPIO, TEST);
+		Relay newRelay = Relay(deviceName, GPIO, TEST, relayDebug);
 		Devices.push_back(newRelay);
 
 		return "Device uploaded!";
@@ -2148,6 +2149,26 @@ string Core::commFunc(string mes)
 		TEST = false;
 		mainLog("TEST mode OFF");
 		return "TEST mode OFF";
+	}
+	else if (mes.find("DEBUGON") != npos) {
+		DeBuG = true;
+		mainLog("Debug mode ON");
+		return "Debug mode ON";
+	}
+	else if (mes.find("DEBUGOFF") != npos) {
+		DeBuG = false;
+		mainLog("Debug mode OFF");
+		return "Debug mode OFF";
+	}
+	else if (mes.find("relaydebugON") != npos) {
+	relayDebug = true;
+	mainLog("Relay debug mode ON");
+	return "Relay debug mode ON";
+	}
+	else if (mes.find("relaydebugOFF") != npos) {
+	relayDebug = false;
+	mainLog("Relay debug mode OFF");
+	return "Relay debug mode OFF";
 	}
 	else if (mes.find("setSolarSettings") != npos) {
 

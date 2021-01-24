@@ -17,7 +17,7 @@ Relay::Relay()
 
 }
 
-Relay::Relay(string namex, int pinNumber, bool &Test)
+Relay::Relay(string namex, int pinNumber, bool &Test, bool &relayDebug)
 {
 	name = namex;
 	workingTime = 0;
@@ -27,6 +27,7 @@ Relay::Relay(string namex, int pinNumber, bool &Test)
 	pinMode(PIN, OUTPUT);
 	digitalWrite(PIN, HIGH);
 	changed = false;
+	debug = &relayDebug;
 }
 
 /*Relay::Relay(string namex, int pinNumber, int workingTimex = 0)
@@ -125,6 +126,8 @@ int Relay::ON() {
 	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
 		START = time(0);
+		
+		if (*debug) cout << name << " -- ON" << endl;
 		return 0;
 	}
 	else {
@@ -135,6 +138,7 @@ int Relay::ON() {
 		}
 		else { return 1; }
 	}
+	if (*debug) cout << name << " -- it was ON" << endl;
 	return 1;
 }
 
@@ -148,6 +152,7 @@ int Relay::OFF() {
 		y.push_back(time(0) - START);
 		WTs.push_back(y);
 		START = 0;
+		if (*debug) cout << name << " -- OFF" << endl;
 		return 0;
 	}
 	else {
@@ -158,6 +163,7 @@ int Relay::OFF() {
 			return 0;
 		}
 	}
+	if (*debug) cout << name << " -- it was OFF" << endl;
 	return 1;
 }
 
@@ -191,7 +197,7 @@ int Relay::getAVGWT() {
 		for (size_t i = 0; i < WTs.size(); i++) {
 			x = x + WTs[i][1];
 		}
-		return (x / WTs.size());
+		return ((x / WTs.size())/60);
 	}
 	else {
 		return -1;
@@ -208,7 +214,7 @@ string Relay::getAVGWTstring() {
 			x = x + WTs[i][1];
 		}
 
-		return to_string(x / WTs.size());
+		return to_string((x / WTs.size())/60);
 	}
 	else {
 		return "No data(" + name + "WTs)\n";

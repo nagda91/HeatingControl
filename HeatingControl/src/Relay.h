@@ -13,7 +13,7 @@ class Relay
 {
 public:
 	Relay();
-	Relay(string, int, bool&);
+	Relay(string, int, bool&, bool&);
 	~Relay();
 
 	int getState();
@@ -36,7 +36,7 @@ private:
 	string name;
 	int PIN, changedByUserTime, START;
 	time_t workingTime = 0;
-	bool changed, *TEST;
+	bool changed, *TEST, *debug;
 	vector<vector <time_t>> WTs;
 };
 
