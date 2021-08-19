@@ -7,7 +7,7 @@ Temperature sensors are the DS18B20-s. You can use wired sensors, and wireless o
 For monitoring and changing settings you have two options:  the Linux terminal and the HeatingControl Android app ( maybe the latest version has not been uploaded yet )
                                                                 
 
-    I have:     RaspberryPi ( I have a RaspberryPi 2 B )
+    I have:     RaspberryPi 2B
                 RaspberryPi compatible relays
                 Some DS18B20(+) temperature sensors
 
@@ -17,5 +17,20 @@ For monitoring and changing settings you have two options:  the Linux terminal a
                         WiringPi library
                         SSH
                         FTP
+
+I usually start the program in a separeted Screen through SSH, so it can run in the backround and if it is necessary I can come back to it.
+
+    The program has five threads: the terminal user interface,
+                                  the MQTT client,
+                                  the basic/core function, it loads the information from the files, and set all the things up,
+                                  the temperarure updating function, it refreshs the measured values and monitoring the availableality of the sensors,
+                                  the heating function, but it runs only if the heating is ON.
+
+
+
+
+
+
+
 
 To be continued...
