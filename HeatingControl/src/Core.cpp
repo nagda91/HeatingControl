@@ -334,13 +334,15 @@ string Core::cmd(const struct mosquitto_message* cmdmsg, string mes)
 				temperatureSensors[sensor].setTemp(20202);
 				temperatureSensors[sensor].getBP();
 				mainLog("EXTsensor fail(332), neu= " + to_string(neu));
-				sendTopic("alert,EXTsensor fail(332)");
+				sendTopic("alert,EXTsensor fail(337)");
+				sendEmail("alert,EXTsensor fail(337)");
 			}
 			else if (neu == 200001) {
 				temperatureSensors[sensor].setTemp(20202);
 				temperatureSensors[sensor].getBP();
 				mainLog("EXTsensor fail(338), neu= " + to_string(neu));
-				sendTopic("alert,EXTsensor fail(338)");
+				sendTopic("alert,EXTsensor fail(344)");
+				sendEmail("alert,EXTsensor fail(344)");
 			}
 			else {
 				temperatureSensors[sensor].setTemp(neu);
@@ -642,17 +644,28 @@ void Core::setTempsthread() {
 	tempsLog(tempslogFirstRow());
 
 	while (STOP) {
+
 		for (size_t i = 0; i < temperatureSensors.size(); i++) {
+
 			if (!temperatureSensors[i].getEXT()) {
+
 				ret = temperatureSensors[i].setTempfromfile(TEST);
+
 			}
 			else {
+
 				if (!temperatureSensors[i].getFresh()) debugLog(temperatureSensors[i].getName() + " - FRESH is false");
+				
 				setExtTemp(i);
+
 				if (!temperatureSensors[i].getWorking()) {
+					
 					debugLog(temperatureSensors[i].getName() + " - WORKING is false");
 					send("topic", "alert," + temperatureSensors[i].getName() + " sensor is not working!");
+					sendEmail("2");
+
 				}
+				
 				debugLog(temperatureSensors[i].getName() + " blackpoints: " + to_string(temperatureSensors[i].showBP()));
 				debugLog(temperatureSensors[i].getName() + " sameCounter: " + to_string(temperatureSensors[i].getsameCounter()));
 
@@ -663,24 +676,33 @@ void Core::setTempsthread() {
 
 			}
 			if (ret != 0) {
+
 				mainLog("error: " + to_string(ret) + ", " + temperatureSensors[i].getName() + " was the problem");
 				mainLog(getGPIO());
 				OK = false;
+
 			}
+
 		}
 
 		if (dayOftheweek() == 1 && newWeek) {
+
 			newWeek = false;
 			tempsFilename = filename(tempsfilename);
-			//tempslog << "datum ; cso ; bojler teteje ; felso hocserelo ; kazan ; lakas ; kemeny ; napko. ; napk.bojler" << endl;
 			tempsLog(tempslogFirstRow());
+
 		}
 		else {
+
 			tempsLog();
+
 		}
+
 		if (dayOftheweek() != 1 && !newWeek) {
+
 			newWeek = true;
 			tempsLog(" #### End ###################################");
+
 		}
 
 		//Samples for Neural Network maybe
@@ -688,6 +710,7 @@ void Core::setTempsthread() {
 
 		delay(1000);
 	}
+
 }
 
 Temp Core::operator[](int x) {
@@ -699,6 +722,8 @@ void Core::basicFunc() {
 	int tempslogI = 1, thisDay = dayOftheweek();
 	//ofstream log;
 	vector<int> day;
+
+	//maybe we do not need it
 	logFilename = filename("/home/pi/Desktop/log/mainlog");
 	//cout << "basicFunc() logFilename: " << logFilename << endl;
 	//log.open(logFilename.c_str(), ios_base::app);//, ios_base::app
@@ -760,6 +785,7 @@ void Core::basicFunc() {
 
 				if (winterEnd < month() && month() < winterStart) {
 					//Summer day
+					
 					try
 					{
 						throw boilerFunc(solarDevicesSensors, solarDiff);
@@ -898,33 +924,47 @@ void Core::basicFunc() {
 			}
 			//boilerMax set in vector every day
 			if (dayOftheweek() != thisDay) {
+
 				thisDay = dayOftheweek();
 
+				sendEmail("Daily reminder for google!");
+
 				for (auto&& i : Devices) {
+
 					mainLog("Yesterday the " + i.getName() + " worked: " + minToTime(i.getWorkingTime()));
 					i.newDay();
+
 				}
+
 				for (auto&& i : temperatureSensors) { mainLog(i.EndOfDay()); }
+
 			}
+
 			delay(8500);
-		}//if(OK)
+
+		}
 		else {
 			
 			if (td_heatingFunc.joinable()) {
+
 				td_heatingFunc.join();
 				heating = false;
 				heatingTime.push_back(time(0) - heatingStartTime);
 				heatingStartTime = 0;
 				mainLog(heatingFuncreturn);
+
 			}
+
 			mainLog("OK = false, one of the temperature sensor not working");
 			send("topic", "alert,OK = false");
+			sendEmail("alert,OK = false");
 
 			for (size_t i = 0; i < Devices.size(); i++) 	Devices[i].OFF();
 
 			OK = true;
 
 			if (RESET) {
+
 				temperatureSensors.clear();
 
 				mainLog("Reset");
@@ -940,11 +980,14 @@ void Core::basicFunc() {
 				catch (string e) {
 					if (e != "0") mainLog(e);
 				}
+
 				RESET = false;
+
 			}
+
 			delay(8500);
 		}
-	}//while()
+	}
 
 	first.join();
 	if (heating) td_heatingFunc.join();
@@ -962,7 +1005,7 @@ void Core::heaterFunc(int* therm) {
 
 	int start, status = 0, mainPipeStartTemp;
 
-	if (DeBuG) cout << "Termostat: " << *therm << endl;
+	if (DeBuG) cout << "Thermostat: " << *therm << endl;
 
 	if (temperatureSensors[heatingSensors[0]].getTemp() < *therm - houseDiff) {//house heating
 		Devices[heatingDevices[2]].OFF();
@@ -993,6 +1036,7 @@ void Core::heaterFunc(int* therm) {
 			if (Devices[heatingDevices[0]].getState() == 0 && (time(0) - start) > 600 && temperatureSensors[heatingSensors[2]].getTemp() - mainPipeStartTemp <= 1500) {
 				sendTopic("alert,Heater is not working!(1000)");
 				mainLog("Heater is not working!(1001)");
+				sendEmail("1");
 			}
 
 			if (time(0) - start > 420 && temperatureSensors[heatingSensors[0]].getTemp() > * therm && temperatureSensors[heatingSensors[2]].getTemp() > onlyPump) {
@@ -1127,7 +1171,7 @@ there1:
 						if (digitalRead(3) != 0 && temperatureSensors[getSensorNumber("gasheater")].getTemp() > temperatureSensors[mainpipe].getTemp() + 10000) digitalWrite(3, LOW);
 						else if (temperatureSensors[getSensorNumber("gasheater")].getTemp() < afterCirculation) digitalWrite(3, HIGH);
 
-						/*if (!digitalRead(2) && tomb[getSensorNumber("gasheater")].getTemp() < tomb[mainpipe].getTemp() && tomb[mainpipe].getTemp() > afterCirculation) {
+						if (!digitalRead(2) && tomb[getSensorNumber("gasheater")].getTemp() < tomb[mainpipe].getTemp() && tomb[mainpipe].getTemp() > afterCirculation) {
 							digitalWrite(3, LOW);
 							heatingMode = 1;
 							mainLog("Sensor(gasheater) was not working, heating mode set to 1(1151)");
@@ -1468,6 +1512,7 @@ void Core::logThread() {
 	if (tempslog.fail()) {
 		mainLog("tempsfilename fail: " + tempsfilename + "\n");
 		sendTopic("alert,fail to open tempsfilename");
+		sendEmail("alert,fail to open tempsfilename, logThread");
 	}
 	else {
 		//if(tempslog.fail()) cout << "tempfilename fail: " << tempsfilename << endl;
@@ -1574,8 +1619,9 @@ string Core::commFunc(string mes)
 		else if (z == WRONGFORMAT) mainLog(mes + " ,format was wrong(<=> missing)! :(");
 		else if (z == NOMATCHINGLINE) mainLog(mes + " ,could not find matching line! :(");
 	}*/
+	/*SUSPENDED
 
-	/*"thermnight","help","thermday","nightstart","nightend","getthermd","getwts",
+	"thermnight","help","thermday","nightstart","nightend","getthermd","getwts",
 		"gettdt","winterstart", "winterend","gettemps","solardiff","housediff",*/
 	if (mes.find("thermnight") != npos) {
 		int neu = szam(mes.substr(mes.find('=') + 1));
@@ -2206,8 +2252,18 @@ string Core::commFunc(string mes)
 			else {
 				cout << "Something went wrong" << endl;
 			}
-	}
+		}
 	return "\n";
+	}
+	else if (mes.find("testemail") != npos) {
+		try {
+			sendEmail("1");
+		}
+		catch (const int e) {
+			if (e == 0) return "Email has been sent!";
+			else { return "Something went wrong"; };
+			}
+		return "Email has been sent!";
 	}
 
 	return "No matching command! type <help> for commands, pls.";
@@ -2320,7 +2376,7 @@ string Core::getVlog(size_t Rows)
 
 	if (Rows >= 0 && !vlog.empty()) {
 		if (Rows < vlog.size()) {
-			for (size_t i = vlog.size() -Rows; i < vlog.size(); i++) {
+			for (size_t i = vlog.size() - Rows; i < vlog.size(); i++) {
 				x += vlog[i];
 			}
 
@@ -2334,6 +2390,7 @@ string Core::getVlog(size_t Rows)
 			return x;
 
 		}
+		return "Log is empty or you gave invalid row number!";
 	}
 	else { return "Log is empty or you gave invalid row number!"; }
 }
@@ -2502,6 +2559,15 @@ int Core::setHeatingMode(int x)
 		return WRONGMODE;
 	}
 
+}
+
+int Core::sendEmail(string type)
+{
+	string cmd = "python py.py";
+	cmd += type;
+	system(cmd.c_str());
+	
+	return 0;
 }
 
 int Core::changeInFile(string s, const char* fileName) {

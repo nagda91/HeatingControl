@@ -34,9 +34,9 @@
 //HEATING MODE
 #define WRONGMODE 1; 
 //Other stuff
-#define MAINLOGFILEPATH "/home/pi/Desktop/log/mainlogfilenames.txt";
-#define TEMPSLOGFILEPATH "/home/pi/Desktop/log/tempslogfilenames.txt";
-#define SETTINGS_FILE "/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
+#define MAINLOGFILEPATH "MAINLOGFILEPATH";
+#define TEMPSLOGFILEPATH "TEMPSLOGFILEPATH";
+#define SETTINGS_FILE "SETTINGS_FILE"
 
 class Core : public mosqpp::mosquittopp, Temp
 {
@@ -162,10 +162,12 @@ private:
 	vector<time_t> heatingTime;//collects the heating thread duration
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
+	//Email notification:
+	string emailSender, emailSenderPSW, emailTo, emailSubject, emailSenderPythonScriptPath;
 	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc = false, heaterLimit = false;
 	bool DeBuG = false, relayDebug = false;
 	time_t heatingStartTime = 0;
-	// Settings
+	// Settings:
 	int winterStart, winterEnd, nightStarttime, nightEndtime;
 	int solarDiff, houseDiff, whilehouseDiff, boilerDiff;
 	int onlyPumpchimneymin, onlyPump, afterCirculation, heaterMax;
@@ -236,6 +238,9 @@ private:
 
 	//we can set which heating mode de we want to use(1 or 2), usable only in command line
 	int setHeatingMode(int);
+
+	//send email notification about a problem
+	int sendEmail(string);
 
 	//Log functions
 

@@ -11,11 +11,16 @@
 #include <mosquitto.h>
 #include "Core.h"
 
-#define CLIENT_ID "HeatingControl"
+#define CLIENT_ID "userID"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
+<<<<<<< HEAD
+#define MQTT_USER "user"
+#define MQTT_PWD "pwd"
+=======
 #define MQTT_USER "USR"
 #define MQTT_PWD "PSW"
+>>>>>>> f0fbb3ec257761caadf2024651ae886b231680f0
 
 using namespace std;
 
@@ -52,6 +57,7 @@ int main() {
 
 	//Starting the user interface
 	string comm;
+
 	do
 	{
 		cout << "Waiting for command: ";
