@@ -11,16 +11,12 @@
 #include <mosquitto.h>
 #include "Core.h"
 
-#define CLIENT_ID "userID"
+#define CLIENT_ID "Client_ID"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
-<<<<<<< HEAD
-#define MQTT_USER "user"
-#define MQTT_PWD "pwd"
-=======
-#define MQTT_USER "USR"
-#define MQTT_PWD "PSW"
->>>>>>> f0fbb3ec257761caadf2024651ae886b231680f0
+#define MQTT_USER "USER"
+#define MQTT_PWD "PWD"
+
 
 using namespace std;
 

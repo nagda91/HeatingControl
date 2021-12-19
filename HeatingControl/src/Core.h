@@ -12,31 +12,37 @@
 #include "Relay.h"
 #include <thread>
 
-//MQTT
+// MQTT
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
 #define MAX_PAYLOAD 50
 #define DEFAULT_KEEP_ALIVE 60
 #define WILL_MESSAGE "alert, HeatingControl disconnected!(will)"
-//mqttReset() returns:
+// mqttReset() returns:
 #define COULDNOTDISCONNECT 1
 #define COULDNOTSTOPLOOP 2
 #define COULDNOTCONNECT 3
 #define COULDNOTSUBSCRIBE 4
 #define COULDNOTSTARTLOOP 5
-//changeInFile() returns:
+// changeInFile() returns:
 #define CANTOPENFILE 1
 #define WRONGFORMAT 2
 #define NOMATCHINGLINE 3
-//eXTERNAL SENSORS
+// eXTERNAL SENSORS
 #define NOMATCHINGSENSOR 1;
 #define SUCCES 0;
-//HEATING MODE
+// HEATING MODE
 #define WRONGMODE 1; 
-//Other stuff
+// Other stuff
 #define MAINLOGFILEPATH "MAINLOGFILEPATH";
 #define TEMPSLOGFILEPATH "TEMPSLOGFILEPATH";
 #define SETTINGS_FILE "SETTINGS_FILE"
+// Log types
+#define logDEF 0 //default, row without type label
+#define logINFO 1
+#define logWARNING 2
+#define logERROR 3
+#define logMQTT 4
 
 class Core : public mosqpp::mosquittopp, Temp
 {
@@ -162,8 +168,6 @@ private:
 	vector<time_t> heatingTime;//collects the heating thread duration
 
 	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
-	//Email notification:
-	string emailSender, emailSenderPSW, emailTo, emailSubject, emailSenderPythonScriptPath;
 	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc = false, heaterLimit = false;
 	bool DeBuG = false, relayDebug = false;
 	time_t heatingStartTime = 0;
@@ -247,7 +251,8 @@ private:
 	/*This function is called every time we want to write sometinhg into the mainlog file
 	you can call it wit/without new row or start the line with the current time or not
 	*/
-	int mainLog(string, bool newRow = true, bool time = true);
+	//int mainLog(string, bool newRow = true, bool time = true);
+	int mainLog(int, string, bool newRow = true, bool time = true);
 
 	/*i dont know what this function for...
 	*/
