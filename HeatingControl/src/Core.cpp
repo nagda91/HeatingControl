@@ -922,7 +922,9 @@ void Core::basicFunc() {
 
 				thisDay = dayOftheweek();
 
-				sendEmail("Daily reminder for google!");
+				//Daily reminder for google, if do not connext in a certain time, google close the possibility to connect
+				//so we connect once a day
+				sendEmail("3");
 
 				for (auto&& i : Devices) {
 
