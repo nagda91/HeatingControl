@@ -1,48 +1,58 @@
-﻿#ifndef Core_H || SIMPLECLIENT_MQTT_H
-#define Core_H
+﻿#define Core_H
 #define SIMPLECLIENT_MQTT_H
 
 #include <iostream>
+#include <fstream>
 #include <string>
-#include "Temp.h"
-#include <wiringPi.h>
+#include <string.h>
+#include <ctime>
+#include <time.h>
+#include <sstream>
+#include <vector>
 #include <thread>
+#include <stdlib.h>
+#include <stdio.h>
+#include <wiringPi.h>
+#include <future>
+#include <chrono>
+#include <math.h>
 #include <mosquittopp.h>
 #include <mosquitto.h>
+#include "Temp.h"
 #include "Relay.h"
-#include <thread>
+
 
 // MQTT
-#define MQTT_PORT 1883;
-#define MQTT_TOPIC "topic"
-#define MAX_PAYLOAD 50
-#define DEFAULT_KEEP_ALIVE 60
-#define WILL_MESSAGE "alert, HeatingControl disconnected!(will)"
+#define MQTT_PORT			1883;
+#define MQTT_TOPIC			"topic"
+#define MAX_PAYLOAD			50
+#define DEFAULT_KEEP_ALIVE	60
+#define WILL_MESSAGE		"alert, HeatingControl disconnected!(will)"
+#define BROKER_ADDRESS		"localhost"
+#define CLIENT_ID			"HeatingControl"
 // mqttReset() returns:
-#define COULDNOTDISCONNECT 1
-#define COULDNOTSTOPLOOP 2
-#define COULDNOTCONNECT 3
-#define COULDNOTSUBSCRIBE 4
-#define COULDNOTSTARTLOOP 5
+#define COULDNOTDISCONNECT	1
+#define COULDNOTSTOPLOOP	2
+#define COULDNOTCONNECT		3
+#define COULDNOTSUBSCRIBE	4
+#define COULDNOTSTARTLOOP	5
 // changeInFile() returns:
-#define CANTOPENFILE 1
-#define WRONGFORMAT 2
-#define NOMATCHINGLINE 3
+#define CANTOPENFILE		1
+#define WRONGFORMAT			2
+#define NOMATCHINGLINE		3
 // eXTERNAL SENSORS
-#define NOMATCHINGSENSOR 1;
-#define SUCCES 0;
+#define NOMATCHINGSENSOR	1
+#define SUCCES				0
 // HEATING MODE
-#define WRONGMODE 1; 
+#define WRONGMODE			1 
 // Other stuff
-#define MAINLOGFILEPATH "MAINLOGFILEPATH";
-#define TEMPSLOGFILEPATH "TEMPSLOGFILEPATH";
-#define SETTINGS_FILE "SETTINGS_FILE"
+#define SETTINGS_FILE		"SETTINGS_FILE";
 // Log types
-#define logDEF 0 //default, row without type label
-#define logINFO 1
-#define logWARNING 2
-#define logERROR 3
-#define logMQTT 4
+#define logDEF				0 //default, row without type label
+#define logINFO				1
+#define logWARNING			2
+#define logERROR			3
+#define logMQTT				4
 
 class Core : public mosqpp::mosquittopp, Temp
 {
@@ -68,7 +78,7 @@ public:
 	-log - mainlog file's folder path
 	-o - temperature sensors location
 	*/
-	string settingsFromFile(string);
+	string settingsFromFile();
 
 	/*This function sets the parameters below:
 		-nightstart
@@ -90,13 +100,13 @@ public:
 
 	Temp operator[](int);
 
-	/*This function is the core of the whole program
+	/*The core of the whole program
 	every other functions, threads starts from it
 	we have to call this as a thread, after we set up the MQTT connection(connect and subscriptions)
 	*/
 	void basicFunc();
 
-	/*This function gives back the basicFunc() as a thread*/
+	/*The basicFunc() as a thread*/
 	thread basicFuncthread();
 
 	/*This function gives back:
@@ -147,71 +157,101 @@ public:
 
 
 	/////MQTT//////
-	int send(string topicstr, string newPl);
-	int sendTopic(string newPl);//send function, topic = "topic"
-	int sendReport(const mosquitto_message* msg, string newPl);//topic = "report", everything what happens
-	string cmd(const struct mosquitto_message* cmdmsg, std::string);//message "cmd" recieved
-	void on_connect(int rc);
-	void on_message(const struct mosquitto_message* message);
-	void on_disconnect(int rc);
-	void on_subscribe(int mid, int qos_count, const int* granted_qos);
-	int mqttReset();
+	int		send(string topicstr, string newPl);
+	int		sendTopic(string newPl);//send function, topic = "topic"
+	int		sendReport(const mosquitto_message* msg, string newPl);//topic = "report", everything what happens
+	int		mqttReset();
+
+	void	on_connect(int rc);
+	void	on_message(const struct mosquitto_message* message);
+	void	on_disconnect(int rc);
+	void	on_subscribe(int mid, int qos_count, const int* granted_qos);
+
+	string	cmd(const struct mosquitto_message* cmdmsg, std::string);//message "cmd" recieved
+
+	
 	/////MQTT//////
 
 protected:
 
 private:
 
-	vector<Temp> temperatureSensors;//temperatures vector
-	vector<Relay> Devices;//Devices vector
-	vector<string> vlog;//lines which are written into the mainlog file are collected in this vector
-	vector<time_t> heatingTime;//collects the heating thread duration
+	vector<Temp>	temperatureSensors;//temperatures vector
+	vector<Relay>	Devices;//Devices vector
+	vector<string>	vlog;//lines which are written into the mainlog file are collected in this vector
+	vector<time_t>	heatingTime;//collects the heating thread duration
 
-	string webfilename, tempsfilename, logfilename, heatingFuncreturn, tempsFilename, logFilename;
-	bool heating = false, OK = true, STOP = true, RESET = false, TEST = false, aCirc = false, heaterLimit = false;
-	bool DeBuG = false, relayDebug = false;
-	time_t heatingStartTime = 0;
+	string			tempLogFilePathName, 
+					mainLogFilePathName, 
+					heatingFuncreturn, 
+					tempFileName, 
+					mainLogFileName;
+
+	bool			heatingRuns = false, 
+					OK = true, 
+					STOP = true, 
+					RESET = false, 
+					TEST = false, 
+					postCircRuns = false, 
+					heaterLimit = false,
+					DeBuG = false, 
+					relayDebug = false;
+
+	time_t			heatingStartTime = 0;
+
 	// Settings:
-	int winterStart, winterEnd, nightStarttime, nightEndtime;
-	int solarDiff, houseDiff, whilehouseDiff, boilerDiff;
-	int onlyPumpchimneymin, onlyPump, afterCirculation, heaterMax;
-	int thermostatDay = 21000, thermostatNight = 19000, *thermostat;
-	int heatingMode, EXTkey;
+	int				winterStart, 
+					winterEnd, 
+					nightStarttime, 
+					nightEndtime,
+					solarDiff, 
+					houseDiff, 
+					whilehouseDiff, 
+					boilerDiff,
+					onlyPumpchimneymin, 
+					onlyPump, 
+					afterCirculation, 
+					heaterMax,
+					thermostatDay = 21000, 
+					thermostatNight = 19000, 
+					heatingMode, 
+					EXTkey;
 
+	int*			thermostat;
+
+	int				sadf = 18499;
+	int*			client_id = &sadf;
 	//Uploading rules for vectors:
 	/*vector<int> heatingDevices = {
 			0 - gasheater,
 			1 - housepump,
 			2 - boilerpump}*/
-	vector<int> heatingDevices;
+	vector<int>		heatingDevices;
 
 	/*vector<int> heatingSensors = {
 			0 - house,
 			1 - heater,
 			2 - mainpipe,
 			3 - chimney }*/
-	vector<int> heatingSensors;
+	vector<int>		heatingSensors;
 
 	/*vector<int> solarDevicesSensors = { 
 			0 - Solarpanel,
 			1 - Solarboiler,
 			2 - Solarpump}*/
-	vector<int> solarDevicesSensors;
+	vector<int>		solarDevicesSensors;
 
 	/*vector<int>  = boilerHeatingDevicesSensors {
 			0 - Mainpipe,
 			1 - Boilermid,
 			2 - boilerpump}*/
-	vector<int> boilerHeatingDevicesSensors;
-
-	//MQTT
-	int sadf = 13245;
-	int* clint_id = &sadf;
+	vector<int>		boilerHeatingDevicesSensors;
 
 	//Functions
 
 	//give back the temperatures
 	string getTemps();
+	string getTempsNew();
 
 	//give back times, diff. and temps
 	string getTDT();
@@ -382,5 +422,3 @@ private:
 
 	int deleteDevice(string);
 };
-
-#endif // SENSOR_H

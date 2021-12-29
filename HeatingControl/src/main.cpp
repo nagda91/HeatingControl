@@ -17,7 +17,6 @@
 #define MQTT_USER "USER"
 #define MQTT_PWD "PWD"
 
-
 using namespace std;
 
 int main() {

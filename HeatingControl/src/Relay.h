@@ -1,9 +1,9 @@
 #include <iostream>
-#include <iostream>
 #include <string>
 #include <time.h>
 #include <vector>
 #include <wiringPi.h>
+#include <cmath>
 
 #pragma once
 

@@ -1,15 +1,9 @@
 #include "Relay.h"
-#include <iostream>
-#include <string>
-#include <time.h>
-#include <vector>
-#include <wiringPi.h>
-#include <cmath>
 
 using namespace std;
 
-Relay::Relay()
-{
+Relay::Relay() {
+
 	workingTime = 0;
 	START = 0;
 	PIN = -1;
@@ -17,8 +11,8 @@ Relay::Relay()
 
 }
 
-Relay::Relay(string namex, int pinNumber, bool &Test, bool &relayDebug)
-{
+Relay::Relay(string namex, int pinNumber, bool &Test, bool &relayDebug) {
+
 	name = namex;
 	workingTime = 0;
 	START = 0;
@@ -30,28 +24,15 @@ Relay::Relay(string namex, int pinNumber, bool &Test, bool &relayDebug)
 	debug = &relayDebug;
 }
 
-/*Relay::Relay(string namex, int pinNumber, int workingTimex = 0)
-{
-	name = namex;
-	workingTime = workingTimex;
-	PIN = pinNumber;
-	digitalWrite(PIN, HIGH);
-	changed = false;
-	state = digitalRead(PIN);
+Relay::~Relay(){}
 
-}
-*/
-Relay::~Relay()
-{
-}
+int Relay::getState() {
 
-int Relay::getState()
-{
 	return digitalRead(PIN);
 }
 
-int Relay::getPIN()
-{
+int Relay::getPIN() {
+
 	return PIN;
 }
 
@@ -66,54 +47,21 @@ int Relay::setPIN(int x, vector<int>& freeGpio) {
 		}
 	}
 
-
-
-
-	/*if (PIN == -1) {
-		for (auto i = 0; i < usedGPIO->size(); i++) {
-			if (usedGPIO->at(i) == x) {
-				PIN = x;
-				usedGPIO[i].erase();
-				pinMode(PIN, OUTPUT);
-				digitalWrite(PIN, HIGH);
-				return 0;
-			}
-			else {
-				return 1;
-			}
-
-		}
-	}
-	else {
-		usedGPIO->push_back(PIN);
-		for (auto i = 0; i < usedGPIO->size(); i++) {
-			if (usedGPIO->at(i) == x) {
-				PIN = x;
-				usedGPIO[i].erase();
-				pinMode(PIN, OUTPUT);
-				digitalWrite(PIN, HIGH);
-				return 0;
-			}
-			else {
-				return 1;
-			}
-		}
-	}*/
 	return 1;
 }
 
-string Relay::getName()
-{
+string Relay::getName() {
+
 	return name;
 }
 
-int Relay::getWorkingTime()
-{
+int Relay::getWorkingTime() {
+
 	return this->workingTime;
 }
 
-int Relay::getLastWT()
-{
+int Relay::getLastWT() {
+
 	if (WTs.empty()) {
 		return 0;
 	}
@@ -123,6 +71,7 @@ int Relay::getLastWT()
 }
 
 int Relay::ON() {
+
 	if (digitalRead(PIN) != 0 && !*TEST) {
 		digitalWrite(PIN, LOW);
 		START = time(0);
@@ -133,7 +82,6 @@ int Relay::ON() {
 	else {
 		if (*TEST && START == 0) {
 			START = time(0);
-			//cout << name << " - ON" << endl;
 			return 0;
 		}
 		else { return 1; }
@@ -159,35 +107,12 @@ int Relay::OFF() {
 		if (*TEST && START != 0) {
 			workingTime = workingTime + time(0) - START;
 			START = 0;
-			//cout << name << " - OFF" << endl;
 			return 0;
 		}
 	}
 	if (*debug) cout << name << " -- it was OFF" << endl;
 	return 1;
 }
-
-/*int Relay::OFF() {
-	if (digitalRead(PIN) != 1) {
-		digitalWrite(PIN, HIGH);
-		state = 1;
-		workingTime += (time(0) - switchedON);
-		vector<time_t> y;
-		y.push_back(switchedON);
-		cout << endl << "in Relay, OFF()-time(0): " << time(0) << endl;
-		cout << endl << "in Relay, OFF()-switcedON: " << switchedON << endl;
-		y.push_back(time(0) - switchedON);
-		WTs.push_back(y);
-		switchedON = 0;
-		cout << endl << "in Relay, OFF(): " << (time(0) - switchedON) << endl;
-		cout << endl << "in Relay, OFF() - y[0]: " << y[0] << endl;
-		cout << endl << "in Relay, OFF() - y[1]: " << y[1] << endl;
-		return (time(0) - switchedON);		
-	}
-	else {
-		return -1;
-	}
-}*/
 
 int Relay::getAVGWT() {
 
@@ -202,7 +127,6 @@ int Relay::getAVGWT() {
 	else {
 		return -1;
 	}
-
 }
 
 string Relay::getAVGWTstring() {
@@ -233,7 +157,6 @@ string Relay::getWTs()
 			r += to_string(WTs[i][1]);
 			r += "\n";
 		}
-
 	}
 	else {
 		r = "No data(gasheaterWTs)\n";

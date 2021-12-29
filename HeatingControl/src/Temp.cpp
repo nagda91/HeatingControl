@@ -1,12 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <ctime>
-#include <sstream>
-#include <vector>
-#include <chrono>
 #include "Temp.h"
-#include <wiringPi.h>
 
 using namespace std;
 
@@ -15,6 +7,7 @@ Temp::Temp()
 	temp = 15000;
 	EXT = false;
 	FRESH = false;
+	URL = false;
 	sameCounter = 0;
 	maxOfDay = -20000;
 	minOfDay = 100000;
@@ -25,7 +18,7 @@ Temp::Temp()
 }
 
 Temp::Temp(bool ext) {
-	EXT = true;
+	EXT = ext;
 	WORKING = true;
 	blackPoint = 0;
 	sameCounter = 0;
@@ -33,6 +26,22 @@ Temp::Temp(bool ext) {
 	maxOfDay = -20000;
 	minOfDay = 100000;
 	if (EXT) oneWireID = name;
+}
+
+Temp::Temp(string sname, string ID, bool wless = false, bool url = false) {
+	
+	name = sname;
+	temp = 15000;
+	EXT = wless;
+	URL = url;
+	FRESH = false;
+	sameCounter = 0;
+	maxOfDay = -20000;
+	minOfDay = 100000;
+	if (EXT) oneWireID = name;
+	else {
+		oneWireID = ID;
+	}
 }
 
 Temp::~Temp()
@@ -73,92 +82,130 @@ void Temp::setName(string x) {
 	name = x;
 }
 
-int Temp::setTempfromfile(bool &Test) {
+int Temp::setTempfromfile(bool *Test) {
 	ifstream f;
 	string row;
 	//string filePath = "/sys/bus/w1/devices/" + oneWireID + "/w1_slave";
 	//Real sensors path
 	//f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
 	//For testing wrong weather
-	if (!Test) f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
-	else { 
-		f.open(("/home/pi/Desktop/HeatingControl_test/" + oneWireID + "/w1_slave").c_str()); 
-	}
+	if (!*Test && !URL) {
+		//Normal mode
+		f.open((ONEWIREDEVICESFOLDER + oneWireID + ONEWIREFILE).c_str());
 
-	if (f.fail()) {
-		temp = 20201;
-		return 1;
-	}
-	else {
-		getline(f, row);
-		getline(f, row);
-		f.close();
-		temp = stringFokinteger(row);
+		if (f.fail()) {
+			temp = CANTOPENTEMPFILE;
+			return 1;
+		}
+		else {
+			getline(f, row);
+			getline(f, row);
+			f.close();
+			temp = stringFokinteger(row);
 
-		if (temp == 85000) {
-			f.open(("/sys/bus/w1/devices/" + oneWireID + "/w1_slave").c_str());
-			if (f.fail()) {
-				temp = 20201;
-				return 1;
-			}
-			else {
-				getline(f, row);
-				getline(f, row);
+			if (temp == 85000) {
 				f.close();
-				temp = stringFokinteger(row);
-				if (temp == 85000) {
-					temp = 20285;
-					f.close();
-					return 2;
+				f.open((ONEWIREDEVICESFOLDER + oneWireID + ONEWIREFILE).c_str());
+
+				if (f.fail()) {
+					temp = CANTOPENTEMPFILE;
+					return 1;
 				}
+				else {
+					getline(f, row);
+					getline(f, row);
+					f.close();
+					temp = stringFokinteger(row);
+					if (temp == 85000) {
+						temp = WRONGVALUE;
+						f.close();
+						return 2;
+					}
+				}
+				f.close();
 			}
 		}
-		f.close();
-
-		Degrees.push_back(temp);
-		if (temp > maxOfDay) maxOfDay = temp;
-		if (temp < minOfDay) minOfDay = temp;
-
-		if (Test) delay(650);
-
-		return 0;
 	}
+	else if (URL) {
+		f.open((URLSENSORFOLDER + oneWireID).c_str()); //Temperature value from idokep.hu
+	
+		if (f.fail()) {
+			temp = CANTOPENTEMPFILE;
+			return 1;
+		}
+		else {
+			std::getline(f, row);
+
+			//Temperature
+			temp = szam(row.substr(row.find("---") + 4, row.find_first_of(";") - row.find("---") - 4))*1000;
+			//Weather type (Cloudy, sunny, raining, etc.)
+			note = row.substr(row.find(";") + 1, row.length() - row.find(";") + 1);
+		}
+	}
+	else {
+		//TEST MODE ON
+		f.open((ONEWIRETESTFOLDER + oneWireID + ONEWIREFILE).c_str());
+
+		if (f.fail()) {
+			temp = CANTOPENTEMPFILE;
+			return 1;
+		}
+		else {
+			getline(f, row);
+			getline(f, row);
+			f.close();
+			temp = stringFokinteger(row);
+		}
+	}
+
+	Degrees.push_back(temp);
+	if (temp > maxOfDay) maxOfDay = temp;
+	if (temp < minOfDay) minOfDay = temp;
+
+	if (*Test) delay(TESTDELAY);
+
+	return 0;
+	
 }
 
-int Temp::stringFokinteger(string szor) {
+int Temp::stringFokinteger(string row) {
 	string t;
 	int h;
 
-	h = szor.length();
+	h = row.length();
 
 	switch (h) {
 	case 35:
 		h = h - 6;
-		t.append(szor.substr(h, 6));
+		t.append(row.substr(h, 6));
 		break;
 	case 34:
 		h = h - 5;
-		t.append(szor.substr(h, 5));
+		t.append(row.substr(h, 5));
 		break;
 	case 33:
 		h = h - 4;
-		t.append(szor.substr(h, 4));
+		t.append(row.substr(h, 4));
 		break;
 	case 32:
 		h = h - 3;
-		t.append(szor.substr(h, 3));
+		t.append(row.substr(h, 3));
 		break;
 	case 31:
 		h = h - 2;
-		t.append(szor.substr(h, 2));
+		t.append(row.substr(h, 2));
 		break;
 	case 30:
 		h = h - 1;
-		t.append(szor.substr(h, 1));
+		t.append(row.substr(h, 1));
 		break;
 	};
 
 	return szam(t);
+}
+
+int Temp::urlTemp(string row) {
+	return szam(row.substr(row.find_last_of(' '), row.length() - row.find_last_of(' ')));
 }
 
 int Temp::szam(string szo) {
@@ -171,58 +218,14 @@ int Temp::szam(string szo) {
 	return x;
 }
 
+string Temp::getID() {
+	return oneWireID;
+}
+
 void Temp::setID(string s) {
 	const char* c;
 	c = s.c_str();
 	oneWireID = c;
-}
-
-void Temp::setEXT(bool x) {
-	EXT = x;
-}
-
-bool Temp::getEXT() {
-	return EXT;
-}
-
-int Temp::getFresh() {
-	return FRESH;
-}
-
-void Temp::setFresh(int x) {
-	if (x == 1 || x == 0) FRESH = x;
-}
-
-void Temp::setLastUpdate() {
-	if (time(0) - lastUpdate > 2) getBP();
-	lastUpdate = time(0);
-}
-
-int Temp::getLastUpdate() {
-	return lastUpdate;
-}
-
-int Temp::showBP() {
-	return blackPoint;
-}
-
-void Temp::getBP() {
-	blackPoint++;
-	if (blackPoint > 10) WORKING = false;
-}
-
-int Temp::getWorking() {
-	return WORKING;
-}
-
-void Temp::setWorking(int x)
-{
-	WORKING = x;
-}
-
-int Temp::getsameCounter()
-{
-	return sameCounter;
 }
 
 string Temp::getAllData()
@@ -231,7 +234,6 @@ string Temp::getAllData()
 
 	ret = "Name = " + name + "\n";
 	ret += "Filename: " + oneWireID + "\n";
-	ret += "Number: " + to_string(number) + "\n";
 	ret += "Temperature: " + to_string(temp) + "\n";
 	if (EXT) {
 		if (WORKING) {
@@ -299,5 +301,70 @@ int Temp::getMax()
 int Temp::getMin()
 {
 	return minOfDay;
+}
+
+//Wireless temperature sensors
+
+void Temp::setEXT(bool x) {
+	EXT = x;
+}
+
+bool Temp::getEXT() {
+	return EXT;
+}
+
+int Temp::getFresh() {
+	return FRESH;
+}
+
+void Temp::setFresh(int x) {
+	if (x == 1 || x == 0) FRESH = x;
+}
+
+void Temp::setLastUpdate() {
+	if (time(0) - lastUpdate > 2) getBP();
+	lastUpdate = time(0);
+}
+
+int Temp::getLastUpdate() {
+	return lastUpdate;
+}
+
+int Temp::showBP() {
+	return blackPoint;
+}
+
+void Temp::getBP() {
+	blackPoint++;
+	if (blackPoint > 10) WORKING = false;
+}
+
+int Temp::getWorking() {
+	return WORKING;
+}
+
+void Temp::setWorking(int x)
+{
+	WORKING = x;
+}
+
+int Temp::getsameCounter()
+{
+	return sameCounter;
+}
+
+//Outside temperature from idokep
+
+void Temp::setMinedSensor() {
+	this->URL = true;
+
+}
+
+string Temp::getNote() {
+	return note;
+}
+
+bool Temp::isUrl() {
+	return URL;
 }
 

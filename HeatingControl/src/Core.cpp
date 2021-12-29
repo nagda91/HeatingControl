@@ -1,34 +1,9 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <string.h>
-#include <ctime>
-#include <time.h>
-#include <sstream>
-#include <vector>
-#include <thread>
-#include <stdlib.h>
-#include <stdio.h>
-#include <wiringPi.h>
-#include <future>
-#include <chrono>
-#include <math.h>
-#include <mosquittopp.h>
-#include <mosquitto.h>
-
-#include "Temp.h"
 #include "Core.h"
-#include "Relay.h"
-
 using namespace std;
-
-#define MAX_PAYLOAD 50
-#define DEFAULT_KEEP_ALIVE 60
-#define BROKER_ADDRESS "localhost"
 
 //Ctrl + M + O - Close all functions :)
 
-/////MQTT///////////////////////////////////////////////////////////////////////////////////
+///// MQTT /////
 Core::Core(const char* id, const char* host, int port, const char* user, const char* passw) : mosquittopp(id)
 {
 	heatingMode = 1;
@@ -37,16 +12,36 @@ Core::Core(const char* id, const char* host, int port, const char* user, const c
 	this->will_set(MQTT_TOPIC, strlen(WILL_MESSAGE), WILL_MESSAGE, 0, false);
 	username_pw_set(user, passw);
 	connect(host, port, keepalive);
-	//cout << "connect: " << connect(host, port, keepalive) << '\n';
+
+	try {
+		throw settingsFromFile();
+		//throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
+	}
+	catch (string e) {
+		if (e != "0") mainLog(logERROR, "SettingsFromFile error value: " + e);
+		else {
+			cout << "All the necessary settings hava been uploaded!\n";
+		}
+	}
+
+	try {
+		throw setTimeDiffTemps();
+	}
+	catch (string e) {
+		if (e != "0") mainLog(logERROR, "SetTimeDiffTemps error value: " + e);
+		else {
+			cout << "All the necessary settings values hava been uploaded!\n";
+		}
+	}
 }
 
 void Core::on_connect(int rc)
 {
 	mainLog(logINFO, "Connectoed to the MQTT broker!");
 
-	this->subscribe(clint_id, MQTT_TOPIC, 2);
+	if (this->subscribe(client_id, "topic", 2) == 0) mainLog(logINFO, "Subscribed to topic!");
 	// <extsensors> topic can be changed, but dont forget to use that topic in your wireless sensors' code
-	this->subscribe(clint_id, "extsensors", 2);
+	if (this->subscribe(client_id, "extsensors", 2) == 0) mainLog(logINFO, "Subscribed to extsensors topic!");
 
 	if (!rc)
 	{
@@ -58,7 +53,7 @@ void Core::on_connect(int rc)
 
 void Core::on_subscribe(int mid, int qos_count, const int* granted_qos)
 {
-	mainLog(logINFO, "Subscribed!");
+	//mainLog(logINFO, "Subscribed!");
 #ifdef DEBUG
 	std::cout << "Subscription succeeded." << std::endl;
 #endif
@@ -467,14 +462,14 @@ int Core::mqttReset() {
 		if (z != 0) return z;
 	}
 	try {
-		throw this->subscribe(clint_id, MQTT_TOPIC, 2);
+		throw this->subscribe(client_id, MQTT_TOPIC, 2);
 	}
 	catch (int z) {
 		mainLog(logINFO, "Subscribe, topic(mqttreset):" + to_string(z));
 		if (z != 0) return z;
 	}
 	try {
-		throw this->subscribe(clint_id, "extsensors", 2);
+		throw this->subscribe(client_id, "extsensors", 2);
 	}
 	catch (int z) {
 		mainLog(logINFO, "Subscribe, extsensors(mqttreset):" + to_string(z));
@@ -490,7 +485,7 @@ int Core::mqttReset() {
 	return 0;
 }
 
-/////MQTT/////////////////////////////////////////////////////////////////////
+///// MQTT /////
 
 Core::Core() {
 
@@ -500,133 +495,187 @@ Core::~Core() {
 	temperatureSensors.clear();
 }
 
-string Core::settingsFromFile(string x)
+string Core::settingsFromFile()
 {
-	heating = 0;
+	heatingRuns = 0;
 	thermostatDay = 20000;
 	thermostatNight = 19000;
 	string row, name;
 	int pin;
 	ifstream f;
+	bool mainLogDone = false;
 
-	f.open(x.c_str());
+	f.open(SETTINGS_FILE);
 
 	if (f.fail()) {
-		cout << x << " -- Unable to open sensors.txt, please look at readme.txt, :)" << endl;
+		cout << SETTINGS_FILE << " -- Unable to open settings.txt, please look at readme.txt, :)" << endl;
 		return "Unable to open sensorfilename.txt, please look at readme.txt, :)";
 	}
 	else {
+
+		size_t z = -1;
+
 		do {
-			size_t z = -1;
 			getline(f, row);
-			if (row.find("#") != z) getline(f, row);
-			if (row.find("-tlp") != z) {
-				row.erase(row.length());
-				this->tempsfilename = row.substr(row.find(' ') + 1, row.find(';'));
-			}
-			else if (row.find("-log") != z) {
-				row.erase(row.length());
-				this->logfilename = row.substr(row.find(' ') + 1, row.find(';'));
-			}
-			else if (row.find("-o") != z) {
 
-				Temp newSensor;
+			if (row.find("#") != z) {}
+			else {
+				if (row.find("-tlp") != z) {
+					row.erase(row.length());
+					this->tempLogFilePathName = row.substr(row.find(' ') + 1, row.find(';'));
+					cout << "Temperature log file's name and path are set: " << tempLogFilePathName << endl;
+				}
+				else if (row.find("-log") != z) {
+					row.erase(row.length());
+					this->mainLogFilePathName = row.substr(row.find(' ') + 1, row.find(';'));
+					mainLogDone = true;
+					mainLogFileName = filename(mainLogFilePathName);
+					cout << "Main log file's name and path are set: " << mainLogFilePathName << endl;
+				}
+				else if (row.find("-o") != z) {
 
-				newSensor.setName(row.substr(row.find_first_of(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1));
-				newSensor.setID(row.substr(row.find_last_of(' ') + 1, 15));
-				temperatureSensors.push_back(newSensor);
-			}
-			else if (row.find("-d") != z) {
+					Temp newSensor;
 
-				name = row.substr(row.find(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1);
-				pin = szam(row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(" ")));
+					/*Temp newSensor(row.substr(row.find_first_of(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1),
+						row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(' ')),
+						false,
+						false);*/
 
-				Relay newRelay = Relay(name, pin, TEST, relayDebug);
+					newSensor.setName(row.substr(row.find_first_of(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1));
+					newSensor.setID(row.substr(row.find_last_of(' ') + 1, 15));
+					temperatureSensors.push_back(newSensor);
 
-				Devices.push_back(newRelay);
+					cout << "New 1wire temperature sensor: " << newSensor.getName() << " - " << newSensor.getID() << endl;
+				}
+				else if (row.find("-urls") != z) {
 
-			}
-			else if (row.find("-HS") != z) { 
-				row = row.substr(row.find_first_of(' ') + 1);
-				try
-				{
-					vectorUploader(row, heatingSensors);
+					Temp newSensor(
+						row.substr(row.find_first_of(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1),
+						row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(' ')),
+						false,
+						true);
+
+					/*newSensor.setName(row.substr(row.find_first_of(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1));
+					newSensor.setID(row.substr(row.find_last_of(' ') + 1, 15));
+					newSensor.setMinedSensor();*/
+					temperatureSensors.push_back(newSensor);
+
+					cout << "New URL temperature sensor: " << newSensor.getName() << " - " << newSensor.getID() << endl;
 				}
-				catch (int e)
-				{
-					if (e != 1) mainLog(logERROR, "HeatingSensors could not be uploaded!");
+				else if (row.find("-d") != z) {
+
+					name = row.substr(row.find(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1);
+					pin = szam(row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(" ")));
+
+					Relay newRelay = Relay(name, pin, TEST, relayDebug);
+
+					Devices.push_back(newRelay);
+
+					cout << "New device: " << newRelay.getName() << " - pin: " << newRelay.getPIN() << endl;
+
 				}
-				
-			}
-			else if (row.find("-HD") != z) {
-				row = row.substr(row.find_first_of(' ') + 1);
-				try
-				{
-					vectorUploader(row, heatingDevices);
+				else if (row.find("-HS") != z) {
+					row = row.substr(row.find_first_of(' ') + 1);
+					try
+					{
+						vectorUploader(row, heatingSensors);
+					}
+					catch (int e)
+					{
+						if (e != 1) cout << logERROR << " HeatingSensors could not be uploaded!";
+						else {
+							cout << "Heating sensors uploaded!\n";
+							//cout << "New heating sensor has been set: " << heatingSensors.end() << " - pin: " << newRelay.getPIN() << endl;
+						}
+					}
+
 				}
-				catch (int e)
-				{
-					if (e != 1) mainLog(logERROR, "HeatingDevices settings could not be uploaded!");
+				else if (row.find("-HD") != z) {
+					row = row.substr(row.find_first_of(' ') + 1);
+					try
+					{
+						vectorUploader(row, heatingDevices);
+					}
+					catch (int e)
+					{
+						if (e != 1 && !mainLogDone) cout << logERROR << " HeatingDevices settings could not be uploaded!";
+						else {
+							cout << "Heating devices uploaded!\n";
+						}
+					}
 				}
-			}
-			else if (row.find("-boilerS") != z) {
-				row = row.substr(row.find_first_of(' ') + 1);
-				try
-				{
-					vectorUploader(row, boilerHeatingDevicesSensors);
+				else if (row.find("-boilerS") != z) {
+					row = row.substr(row.find_first_of(' ') + 1);
+					try
+					{
+						vectorUploader(row, boilerHeatingDevicesSensors);
+					}
+					catch (int e)
+					{
+						if (e != 1 && !mainLogDone) cout << logERROR << " BoilerHeatingDevicesSensors settings could not be uploaded!";
+						else {
+							cout << "Boiler sensors and devices uploaded!\n";
+						}
+					}
 				}
-				catch (int e)
-				{
-					if (e != 1) mainLog(logERROR, "BoilerHeatingDevicesSensors settings could not be uploaded!");
-				}
-			}
-			else if (row.find("-solarS") != z) {
-				row = row.substr(row.find_first_of(' ') + 1);
-				try
-				{
-					vectorUploader(row, solarDevicesSensors);
-				}
-				catch (int e)
-				{
-					if (e != 1) mainLog(logERROR, "SolarDevicesSensors settings could not be uploaded!");
+				else if (row.find("-solarS") != z) {
+					row = row.substr(row.find_first_of(' ') + 1);
+					try
+					{
+						vectorUploader(row, solarDevicesSensors);
+					}
+					catch (int e)
+					{
+						if (e != 1 && !mainLogDone) cout << logERROR << " SolarDevicesSensors settings could not be uploaded!";
+						else {
+							cout << "Solarpanel sensors and devices uploaded!\n";
+						}
+					}
 				}
 			}
 		} while (!f.eof());
 		f.close();
 	}
 
-	mainLog(logINFO, "Uploaded sensors:(Name -- ID)");
-	for (size_t i = 0; i < temperatureSensors.size(); i++) {
-		mainLog(logDEF, (to_string(i + 1) + ". " + temperatureSensors[i].getName() + " -- " + temperatureSensors[i].getFilename()),true, false);
+	if (mainLogDone) {
+		mainLog(logDEF, "################ Start -- " + longtime() + " ################", true, false);
+
+		mainLog(logINFO, "Uploaded sensors:(Name -- ID)");
+		for (size_t i = 0; i < temperatureSensors.size(); i++) {
+			mainLog(logDEF, (to_string(i + 1) + ". " + temperatureSensors[i].getName() + " -- " + temperatureSensors[i].getFilename()), true, false);
+		}
+		mainLog(logINFO, "Uploaded devices:(Name -- GPIO)");
+		for (size_t i = 0; i < Devices.size(); i++) {
+			mainLog(logDEF, (to_string(i + 1) + ". " + Devices[i].getName() + " -- " + to_string(Devices[i].getPIN())), true, false);
+		}
+		mainLog(logINFO, "HeatingSensors settings(House, Heater, Mainpipe, Chimney): ", false);
+		for (size_t i = 0; i < heatingSensors.size(); i++) {
+			if (i != 0) mainLog(logDEF, ",", false, false);
+			mainLog(logDEF, to_string(heatingSensors[i]), false, false);
+		}
+		mainLog(-1, "", true, false);
+		mainLog(logINFO, "HeatingDevices settings(Gasheater, Houspump, Boilerpump): ", false);
+		for (size_t i = 0; i < heatingDevices.size(); i++) {
+			if (i != 0) mainLog(logDEF, ",", false, false);
+			mainLog(logDEF, to_string(heatingDevices[i]), false, false);
+		}
+		mainLog(logDEF, "", true, false);
+		mainLog(logINFO, "Solar heating settings(Solar, Boiler, Pump): ", false);
+		for (size_t i = 0; i < solarDevicesSensors.size(); i++) {
+			if (i != 0) mainLog(logDEF, ",", false, false);
+			mainLog(logDEF, to_string(solarDevicesSensors[i]), false, false);
+		}
+		mainLog(logDEF, "", true, false);
+		mainLog(logINFO, "Boiler heating settings(Pipe, Boiler, Pump): ", false);
+		for (size_t i = 0; i < boilerHeatingDevicesSensors.size(); i++) {
+			if (i != 0) mainLog(logDEF, ",", false, false);
+			mainLog(logDEF, to_string(boilerHeatingDevicesSensors[i]), false, false);
+		}
+
+		mainLog(logDEF, "", true, false);
+
 	}
-	mainLog(logINFO, "Uploaded devices:(Name -- GPIO)");
-	for (size_t i = 0; i < Devices.size(); i++) {
-		mainLog(logDEF, (to_string(i + 1) + ". " + Devices[i].getName() + " -- " + to_string(Devices[i].getPIN())),true,false);
-	}
-	mainLog(logINFO, "HeatingSensors settings(House, Heater, Mainpipe, Chimney): ", false);
-	for (size_t i = 0; i < heatingSensors.size(); i++) {
-		if (i != 0) mainLog(logDEF, ",", false, false);
-		mainLog(logDEF, to_string(heatingSensors[i]), false, false);
-	}
-	mainLog(-1, "", true, false);
-	mainLog(logINFO, "HeatingDevices settings(Gasheater, Houspump, Boilerpump): ", false);
-	for (size_t i = 0; i < heatingDevices.size(); i++) {
-		if (i != 0) mainLog(logDEF, ",", false, false);
-		mainLog(logDEF, to_string(heatingDevices[i]), false, false);
-	}
-	mainLog(logDEF, "", true, false);
-	mainLog(logINFO, "Solar heating settings(Solar, Boiler, Pump): ", false);
-	for (size_t i = 0; i < solarDevicesSensors.size(); i++) {
-		if (i != 0) mainLog(logDEF, ",", false, false);
-		mainLog(logDEF, to_string(solarDevicesSensors[i]), false, false);
-	}
-	mainLog(logDEF, "", true, false);
-	mainLog(logINFO, "Boiler heating settings(Pipe, Boiler, Pump): ", false);
-	for (size_t i = 0; i < boilerHeatingDevicesSensors.size(); i++) {
-		if (i != 0) mainLog(logDEF, ",", false, false);
-		mainLog(logDEF, to_string(boilerHeatingDevicesSensors[i]), false, false);
-	}
-	mainLog(logDEF, "", true, false);
+
 	return "0";
 }
 
@@ -637,7 +686,7 @@ void Core::setTempsthread() {
 	bool newWeek = true;
 
 	//first row the tempslog
-	tempsFilename = filename(tempsfilename);
+	tempFileName = filename(tempLogFilePathName);
 	tempsLog(tempslogFirstRow());
 
 	while (STOP) {
@@ -646,7 +695,7 @@ void Core::setTempsthread() {
 
 			if (!temperatureSensors[i].getEXT()) {
 
-				ret = temperatureSensors[i].setTempfromfile(TEST);
+				ret = temperatureSensors[i].setTempfromfile(&TEST);
 
 			}
 			else {
@@ -683,7 +732,7 @@ void Core::setTempsthread() {
 		if (dayOftheweek() == 1 && newWeek) {
 
 			newWeek = false;
-			tempsFilename = filename(tempsfilename);
+			tempFileName = filename(tempLogFilePathName);
 			tempsLog(tempslogFirstRow());
 
 		}
@@ -715,56 +764,7 @@ Temp Core::operator[](int x) {
 void Core::basicFunc() {
 
 	int tempslogI = 1, thisDay = dayOftheweek();
-	//ofstream log;
 	vector<int> day;
-
-	//maybe we do not need it
-	logFilename = filename("/home/pi/Desktop/log/mainlog");
-	//cout << "basicFunc() logFilename: " << logFilename << endl;
-	//log.open(logFilename.c_str(), ios_base::app);//, ios_base::app
-	/*if (log.fail()) {
-		cout << "basicFunc()  fail to open logFilename: " << logFilename << endl;
-		send("report", "basicFunc()  fail to open logFilename");
-		sendTopic("fault, basicFunc()  fail to open logFilename");
-	}
-	else {
-		//log << "Start: " << longtime() << endl;
-		//log.close();
-		mainLog("Start: " + longtime() + "\n");
-	}*/
-
-	mainLog(logDEF, "################ Start -- " + longtime() + " ################", true, false);
-
-	delay(3000);
-
-	/*try
-	{
-		throw setDevices("/home/pi/projects/thenewone/bin/ARM/Release/devices.txt");
-	}
-	catch (const int e)
-	{
-		if (e == 0) {
-			mainLog("Devices uploaded!(696)");
-			mainLog(Devs.getDevicesData());
-		}
-		else {
-			mainLog("Devices - Something went wrong!(700)");
-		}
-	}*/
-
-	try {
-		throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
-	}
-	catch (string e) {
-		if (e != "0") mainLog(logERROR, "SettingsFromFile error value: " + e);
-	}
-
-	try {
-		throw setTimeDiffTemps();
-	}
-	catch (string e) {
-		if (e != "0") mainLog(logERROR, "SetTimeDiffTemps error value: " + e);
-	}
 
 	std::thread first = std::thread(&Core::setTempsthread, this);
 	delay(8000);
@@ -795,13 +795,13 @@ void Core::basicFunc() {
 					//Winter day
 					if (td_heatingFunc.joinable()) {
 						td_heatingFunc.join();
-						heating = false;
+						heatingRuns = false;
 						mainLog(logINFO, heatingFuncreturn);
 						heatingTime.push_back(time(0) - heatingStartTime);
 						heatingStartTime = 0;
 					}
 					else {
-						if (!heating) {
+						if (!heatingRuns) {
 							switch (heatingMode) {
 							case 1: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
@@ -813,7 +813,7 @@ void Core::basicFunc() {
 							delay(500);
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
-								heating = false;
+								heatingRuns = false;
 								heatingStartTime = 0;
 								if (!heatingFuncreturn.empty()) {
 									mainLog(logINFO, heatingFuncreturn);
@@ -826,7 +826,7 @@ void Core::basicFunc() {
 						}
 					};
 
-					if (!heating) {
+					if (!heatingRuns) {
 						try
 						{
 							throw boilerFunc(boilerHeatingDevicesSensors, boilerDiff);
@@ -864,13 +864,13 @@ void Core::basicFunc() {
 					//Winter night
 					if (td_heatingFunc.joinable()) {
 						td_heatingFunc.join();
-						heating = false;
+						heatingRuns = false;
 						mainLog(logINFO, heatingFuncreturn);
 						heatingTime.push_back(time(0) - heatingStartTime);
 						heatingStartTime = 0;
 					}
 					else {
-						if (!heating) {
+						if (!heatingRuns) {
 							switch (heatingMode) {
 							case 1: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 								break;
@@ -882,7 +882,7 @@ void Core::basicFunc() {
 							delay(500);
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
-								heating = false;
+								heatingRuns = false;
 								heatingStartTime = 0;
 								if (!heatingFuncreturn.empty()) {
 									mainLog(logINFO, heatingFuncreturn);
@@ -894,7 +894,7 @@ void Core::basicFunc() {
 							}
 						}
 					}
-					if (!heating) {
+					if (!heatingRuns) {
 						try
 						{
 							throw boilerFunc(boilerHeatingDevicesSensors, boilerDiff);
@@ -913,7 +913,7 @@ void Core::basicFunc() {
 			if (dayOftheweek() != 0 && tempslogI == 1) tempslogI = 0;
 			if (dayOftheweek() == 0 && tempslogI == 0) {
 				mainLog(logDEF, "End");
-				logFilename = filename(logfilename);
+				mainLogFileName = filename(mainLogFilePathName);
 				mainLog(logDEF, "Start");
 				tempslogI = 1;
 			}
@@ -945,7 +945,7 @@ void Core::basicFunc() {
 			if (td_heatingFunc.joinable()) {
 
 				td_heatingFunc.join();
-				heating = false;
+				heatingRuns = false;
 				heatingTime.push_back(time(0) - heatingStartTime);
 				heatingStartTime = 0;
 				mainLog(logINFO, heatingFuncreturn);
@@ -985,7 +985,7 @@ void Core::basicFunc() {
 	}
 
 	first.join();
-	if (heating) td_heatingFunc.join();
+	if (heatingRuns) td_heatingFunc.join();
 
 	for (auto&& i : Devices) { mainLog(logINFO, "Today the " + i.getName() + " worked: " + minToTime(i.getWorkingTime())); }
 }
@@ -1007,7 +1007,7 @@ void Core::heaterFunc(int* therm) {
 		start = time(0);
 		mainLog(logINFO, "Heating started, mode 1, Thermostat: " + to_string(*therm) + "°C");
 		mainPipeStartTemp = temperatureSensors[heatingSensors[2]].getTemp();
-		heating = true;
+		heatingRuns = true;
 		do {
 			if (temperatureSensors[heatingSensors[3]].getTemp() > onlyPumpchimneymin) {//only housepump, becouse the chimney is hot
 				Devices[heatingDevices[1]].ON();
@@ -1081,11 +1081,11 @@ there:
 
 		if (temperatureSensors[heatingSensors[2]].getTemp() > afterCirculation && temperatureSensors[heatingSensors[3]].getTemp() < onlyPumpchimneymin) {
 			//aftercirculation
-			if (!aCirc) {
+			if (!postCircRuns) {
 				Devices[heatingDevices[1]].ON();
 				//digitalWrite(3, LOW);
 				mainLog(logINFO, "Postcirculation ON");
-				aCirc = true;
+				postCircRuns = true;
 			}
 			/*if (heating != 0)	mainLog("aftercirculation ON", false, false);
 			else {
@@ -1095,11 +1095,11 @@ there:
 		}
 		else {//stop aftercirculation
 
-			if (aCirc) {
+			if (postCircRuns) {
 				Devices[heatingDevices[1]].OFF();
 				//digitalWrite(3, HIGH);
 				mainLog(logINFO, "Postcirculation OFF");
-				aCirc = false;
+				postCircRuns = false;
 			}
 			
 
@@ -1108,7 +1108,7 @@ there:
 	}//else kazan > 60
 	// lakas > termosztat end
 there1:
-	if(!aCirc && !heaterLimit) Devices[heatingDevices[1]].OFF();
+	if(!postCircRuns && !heaterLimit) Devices[heatingDevices[1]].OFF();
 	Devices[heatingDevices[0]].OFF();
 	
 }
@@ -1401,13 +1401,6 @@ int Core::timeinMin(string x) {
 
 string Core::longtime() {
 	std::time_t result = std::time(nullptr);
-	//std::cout << std::asctime(std::localtime(&result));
-	//time_t now = szam(time(nullptr));
-	//auto now;
-	//auto now = time(NULL);
-	//char* dt = asctime(localtime(&now));
-	//char* dt = ctime(szam(time(0)));
-	//return string(dt);
 	string ltime = std::asctime(std::localtime(&result));
 	return ltime.substr(0, ltime.length() - 1);
 }
@@ -1434,8 +1427,6 @@ int Core::dayOftheweek() {
 }
 
 string Core::filename(string path) {
-	//string ev, honap, nap, sor;
-	//sor = longtime();
 
 	struct tm* theTime;
 	char buffer[80];
@@ -1445,122 +1436,25 @@ string Core::filename(string path) {
 
 	strftime(buffer, 80, "%m%d%y.txt", theTime);
 
-	/*honap = theTime->tm_wday;
-	nap = theTime->tm_mday;
-
-	//Tue Nov 10 12:37:07 2015   24db 0-23
-	ev.append(sor.substr(sor.length() - 3, 2));
-	honap.append(sor.substr(sor.length() - 21, 3));
-	nap.append(sor.substr(sor.length() - 17, 2));
-	if (honap == "Jan")
-		honap = "01";
-	if (honap == "Feb")
-		honap = "01";
-	if (honap == "Mar")
-		honap = "03";
-	if (honap == "Apr")
-		honap = "04";
-	if (honap == "May")
-		honap = "05";
-	if (honap == "Jun")
-		honap = "06";
-	if (honap == "Jul")
-		honap = "07";
-	if (honap == "Aug")
-		honap = "08";
-	if (honap == "Sep")
-		honap = "09";
-	if (honap == "Oct")
-		honap = "10";
-	if (honap == "Nov")
-		honap = "11";
-	if (honap == "Dec")
-		honap = "12";
-	///home/pi/Desktop/cb/log/tempslog/temps" +
-	return path + honap + nap + ev + ".txt";*/
 	return path + buffer;
 }
 
-string Core::tempslogFirstRow()
-{
-	string x = "date";
+string Core::tempslogFirstRow() {
+	int weather = -1;
+	string x = "\ndate";
+
 	for (size_t i = 0; i < temperatureSensors.size(); i++) {
 		x += ";";
 		x += temperatureSensors[i].getName();
+		if (temperatureSensors[i].isUrl()) weather = i;
 	}
-	x += "\n";
+
+	if (weather > -1) {
+		x += ";";
+		x += temperatureSensors[weather].getNote();
+	}
+
 	return x;
-}
-
-//Nincs használva
-void Core::logThread() {
-	int tempslogI = 1;
-	ofstream web, tempslog;
-	vector<int> day;
-
-	//web.open(webfilename.c_str(), ios_base::app);
-	//"/home/pi/Desktop/cb/log/strekszel.txt"
-	//if(web.fail()) mainLog("webfname fail: " + webfilename + "\n");
-	//if(web.fail()) cout << "webfname fail: " << webfilename << endl;
-	tempsFilename = filename(tempsfilename);
-	//cout << tempsFilename << endl;
-	tempslog.open(tempsFilename.c_str(), ios_base::app);
-	if (tempslog.fail()) {
-		mainLog(logERROR, "tempsfilename fail: " + tempsfilename + "\n");
-	}
-	else {
-		//if(tempslog.fail()) cout << "tempfilename fail: " << tempsfilename << endl;
-		//tempslog << "datum ; cso ; bojler teteje ; felso hocserelo ; kazan ; lakas ; kemeny ; napko. ; napk.bojler" << endl;
-		tempslog << tempslogFirstRow();
-		tempslog.close();
-	};
-
-
-	if (dayOftheweek() != 0 && tempslogI == 1) tempslogI = 0;
-	if (dayOftheweek() == 0 && tempslogI == 0) {
-		tempslog.open(tempsFilename.c_str(), ios_base::app);
-		tempslog << "End: " << longtime() << endl;
-		tempslog.close();
-		tempsFilename = filename(tempsfilename);
-		tempslog.open(tempsFilename.c_str(), ios_base::app);
-		tempslog << tempslogFirstRow();
-		tempslog.close();
-		//tempslog << "datum ; ido ; cso ; bojler teteje ; felso hocserelo ; kazan ; lakas ; kemeny ; napko. ; napk.bojler" << endl;
-		//tempslog << longtime() << ";" << mainpipe << ";" << boiler1 << ";" << boiler2 << ";" << heater << ";" << house << ";" << chimney << ";" << solar << ";" << solarboiler << ";" << endl;
-		tempslogI = 1;
-	}
-	else {
-		//tempslog << longtime();
-		/*for (int i = 0; i < tomb.size(); i++) {
-			tempslog << " ;" << tomb[i].getTemp();
-		}
-		tempslog << endl;*/
-		if (dayOftheweek() != 0) tempslogI = 0;
-	}
-	/*if (fileI == 2) {
-		web.close();
-		web.open(webfilename.c_str());
-		web << longtime();
-		for (int i = 0; i < meret; i++) {
-			web << "; " << tomb[i].getTemp();
-		}
-		web << endl;
-		fileI = 0;
-	}
-	else {
-		web << longtime();
-		for (int i = 0; i < meret; i++) {
-			web << "; " << tomb[i].getTemp();
-		}
-		web << endl;
-		fileI = fileI + 1;
-	}*/
-
-	delay(45500);
-
-	tempslog.open(tempsFilename.c_str(), ios_base::app);
-	tempslog << "End: " << longtime() << endl;
-	tempslog.close();
 }
 
 int Core::getSensorMax(string sensorName)
@@ -1695,7 +1589,7 @@ string Core::commFunc(string mes)
 		return getTDT();
 	}
 	else if (mes.find("gettemps") != npos) {
-		return getTemps();
+		return getTempsNew();
 	}
 	else if (mes.find("winterstart") != npos) {
 		//cout << "cmd(), wS()";
@@ -1831,7 +1725,7 @@ string Core::commFunc(string mes)
 	else if (mes.find("getgpio") != npos) {
 		return getGPIO();
 	}
-	else if (mes.find("Reset") != npos) {
+	else if (mes.find("reset") != npos) {
 		/*RESET = false;
 		if (digitalRead(0) != 1) {
 			digitalWrite(0, HIGH);
@@ -1924,7 +1818,6 @@ string Core::commFunc(string mes)
 		return getSensorNames();
 	}
 	else if (mes.find("addES") != npos) {
-		//cout << mes.substr(mes.find('=') + 1) << endl;
 		try {
 			throw addExtTempSensor(mes.substr(mes.find('=') + 1));
 		}
@@ -2243,12 +2136,6 @@ string Core::commFunc(string mes)
 }
 
 string Core::getTemps() {
-	//string temps;
-
-	/*for (size_t i = 0; i < temperatureSensors.size(); i++) {
-		if (i != 0) temps = temps + "\n";
-		temps = temps + temperatureSensors[i].getName() + "=" + to_string(temperatureSensors[i].getTemp());
-	}*/
 
 	string temps = "focso =" + to_string(temperatureSensors[0].getTemp()) + "\n";
 	temps = temps + "bojler1 =" + to_string(temperatureSensors[1].getTemp()) + "\n";
@@ -2262,20 +2149,19 @@ string Core::getTemps() {
 	return temps;
 }
 
-//int Core::mainLog(string str, bool newRow, bool time) {
-//	ofstream f;
-//	f.open(logFilename.c_str(), ios_base::app);
-//	if (time && newRow)	f << longtime() << " --- " << str << endl;
-//	if (!time && !newRow) f << str;
-//	if (!time && newRow) f << str << endl;
-//	if (time && !newRow) f << longtime() << " --- " << str;
-//
-//	f.close();
-//
-//	pushBackvLog(&str);
-//
-//	return 0;
-//}
+string Core::getTempsNew() {
+
+	string temps;
+
+	temps = "Temperature sensors:(Name -- ID)\n";
+
+	for (size_t i = 0; i < temperatureSensors.size(); i++) {
+		temps += to_string(i + 1) + ". " + temperatureSensors[i].getName() + " -- " + to_string(temperatureSensors[i].getTemp()) + "\n";
+		if (temperatureSensors[i].isUrl()) temps += temperatureSensors[i].getName() + " -- " + temperatureSensors[i].getNote() + "\n";
+	}
+
+	return temps;
+}
 
 int Core::mainLog(int type, string str, bool newRow, bool time) {
 	
@@ -2324,7 +2210,7 @@ int Core::mainLog(int type, string str, bool newRow, bool time) {
 		break;
 	}
 
-	f.open(logFilename.c_str(), ios_base::app);
+	f.open(mainLogFileName.c_str(), ios_base::app);
 
 	if (time && newRow)	f << (longtime() + " --- " + log + "\n");
 	if (!time && !newRow) f << log;
@@ -2333,14 +2219,13 @@ int Core::mainLog(int type, string str, bool newRow, bool time) {
 
 	f.close();
 
-	//pushBackvLog(&str);
-
 	return 0;
 }
 
 int Core::fileNameLog(string name, string kind)
 {
-	ofstream of;
+	//Need rework
+	/*ofstream of;
 	ifstream inf;
 	string x, y;
 
@@ -2379,7 +2264,7 @@ int Core::fileNameLog(string name, string kind)
 		of.open(y.c_str(), ios_base::app);
 		of << name << endl;
 		of.close();
-	}
+	}*/
 
 	return 0;
 }
@@ -2439,11 +2324,16 @@ void Core::mqttLog(string str) {
 void Core::tempsLog()
 {
 	ofstream f;
-	f.open(tempsFilename.c_str(), ios_base::app);
+	int weather = -1;
+	f.open(tempFileName.c_str(), ios_base::app);
 	f << endl << longtime();
 	for (size_t i = 0; i < temperatureSensors.size(); i++) {
 		f << ";" << temperatureSensors[i].getTemp();
+		if (temperatureSensors[i].isUrl()) weather = i;
 	}
+
+	if (weather > -1) f << ";" << temperatureSensors[weather].getNote();
+
 	if (TEST) f << "TEST";
 	f.close();
 }
@@ -2455,6 +2345,7 @@ void Core::AIsamples()
 	f << endl << longtime();
 	for (size_t i = 0; i < temperatureSensors.size(); i++) {
 		f << ";" << temperatureSensors[i].getTemp();
+		if (temperatureSensors[i].isUrl()) f << ";" << temperatureSensors[i].getNote();
 	}
 
 	f << ";";
@@ -2468,8 +2359,8 @@ void Core::AIsamples()
 void Core::tempsLog(string str)
 {
 	ofstream f;
-	f.open(tempsFilename.c_str(), ios_base::app);
-	f << longtime() << str;
+	f.open(tempFileName.c_str(), ios_base::app);
+	f << longtime() << str << "\n";
 	f.close();
 }
 
@@ -2734,7 +2625,6 @@ int Core::setExtTemp(int x) {
 	EXTkey = time(0);
 	string pl = "temp," + to_string(EXTkey) + "," + temperatureSensors[x].getFilename();
 	temperatureSensors[x].setFresh(false);
-	//cout << "Last update: " << time(0) << " - " << tomb[x].getLastUpdate() <<" - " << time(0) - getLastUpdate() << endl;
 	if (time(0) - temperatureSensors[x].getLastUpdate() > 15) temperatureSensors[x].getBP();
 	send("extsensors", pl);
 	return SUCCES;
