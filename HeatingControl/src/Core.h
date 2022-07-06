@@ -20,6 +20,7 @@
 #include <sqlite3.h>
 #include "Temp.h"
 #include "Relay.h"
+#include "gpiod.h"
 
 // MQTT
 #define MQTT_PORT			1883;

@@ -13,6 +13,16 @@ Core::Core(const char* id, const char* host, int port, const char* user, const c
 	username_pw_set(user, passw);
 	connect(host, port, keepalive);
 
+	//GPIOd
+	const char* chipname = "gpiochip0";
+	struct gpiod_chip* chip;
+
+	chip = gpiod_chip_open_by_name(chipname);
+	if (!chip) {
+		perror("Open chip for GPIO failed\n");
+	}
+	//GPIOd
+
 	try {
 		throw settingsFromFile();
 		//throw settingsFromFile("/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt");
