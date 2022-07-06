@@ -12,15 +12,14 @@
 #include <thread>
 #include <stdlib.h>
 #include <stdio.h>
-#include <wiringPi.h>
 #include <future>
 #include <chrono>
 #include <math.h>
 #include <mosquittopp.h>
 #include <mosquitto.h>
+#include <sqlite3.h>
 #include "Temp.h"
 #include "Relay.h"
-
 
 // MQTT
 #define MQTT_PORT			1883;
@@ -46,7 +45,9 @@
 // HEATING MODE
 #define WRONGMODE			1 
 // Other stuff
-#define SETTINGS_FILE		"SETTINGS_FILE";
+//#define SETTINGS_FILE		"SETTINGS_FILE";
+#define SETTINGS_FILE		"/home/pi/projects/HeatingControl/bin/ARM/Release/settings.txt"
+#define DATABASEPATH		"/var/www/html/backend/db.sqlite3"
 // Log types
 #define logDEF				0 //default, row without type label
 #define logINFO				1
@@ -128,7 +129,7 @@ public:
 		<getthermd> to get day thermostat
 		<getwts> to get working times(heater, pumps)
 		<gettdt> to get times, diff. end temperatures
-		<gettemps> to get the actual temperatures
+		<gettemps> to get the current temperatures
 		<thermnight>=<value>, to set night thermostat
 		<thermday>=<value> to set day thermostat
 		<nstarttime>=<time in min> to set night start time
@@ -324,10 +325,10 @@ private:
 	//This function gives back which day of the week is at the moment(Sunday = 0)
 	int dayOftheweek();
 
-	//actual month
+	//current month
 	int month();
 
-	//actual time in min
+	//current time in min
 	int timeinMin();
 
 	//given time("6:30") convert to min
@@ -358,7 +359,7 @@ private:
 		This function is esed for the solarheating and the pipe heating too*/
 	int boilerFunc(vector<int>&, int&);
 
-	//This function create a new filename with actual date, its called every startup, and every Sunday 0:00	
+	//This function create a new filename with current date, its called every startup, and every Sunday 0:00	
 	string filename(string);
 
 	/*These two functions look at is the new value is the lowest or the biggest every day, and every temperature update*/
@@ -375,6 +376,8 @@ private:
 	/*This function is called every time it creates a new temperature log file
 	every temperature sensor's name is written into the first line, separated with <;>*/
 	string tempslogFirstRow();
+
+	string onePrecDegreeC(double);
 
 	//########## Functions for threads ##############
 
@@ -421,4 +424,9 @@ private:
 	int AVGheatingTime();
 
 	int deleteDevice(string);
+
+	// Database handlers for the django backend
+	void updateValuesInDB();
+	static int callback(void*, int, char**, char**);
+	void sqlUpdate(string, string, string, string, string, bool, bool);
 };

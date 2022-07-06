@@ -53,6 +53,17 @@ int Temp::getTemp() {
 	return temp;
 }
 
+string Temp::getTempStr() {
+
+	std::ostringstream streamObj3;
+	streamObj3 << std::fixed;
+	streamObj3 << std::setprecision(1);
+	streamObj3 << double(temp) / 1000;
+	std::string strObj3 = streamObj3.str();
+
+	return strObj3;
+}
+
 string Temp::getName() {
 	return name;
 }
@@ -162,7 +173,7 @@ int Temp::setTempfromfile(bool *Test) {
 	if (temp > maxOfDay) maxOfDay = temp;
 	if (temp < minOfDay) minOfDay = temp;
 
-	if (*Test) delay(TESTDELAY);
+	//if (*Test) //NEED SOMETHING THAT CAN MAKE DELAY (TESTDELAY);
 
 	return 0;
 	

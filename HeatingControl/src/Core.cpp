@@ -751,6 +751,7 @@ void Core::setTempsthread() {
 
 		//Samples for Neural Network maybe
 		if(!TEST) AIsamples();
+		if (!TEST) updateValuesInDB();
 
 		delay(1000);
 	}
@@ -878,8 +879,10 @@ void Core::basicFunc() {
 								break;
 							default: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 							}
+
 							heatingStartTime = time(0);
 							delay(500);
+
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
 								heatingRuns = false;
@@ -911,6 +914,7 @@ void Core::basicFunc() {
 
 			/*"datum ; ido ; cso ; bojler teteje ; felso hocserelo ; kazan ; lakas ; kemeny ; napko. ; napk.bojler:"*/
 			if (dayOftheweek() != 0 && tempslogI == 1) tempslogI = 0;
+
 			if (dayOftheweek() == 0 && tempslogI == 0) {
 				mainLog(logDEF, "End");
 				mainLogFileName = filename(mainLogFilePathName);
@@ -1004,6 +1008,7 @@ void Core::heaterFunc(int* therm) {
 
 	if (temperatureSensors[heatingSensors[0]].getTemp() < *therm - houseDiff) {//house heating
 		Devices[heatingDevices[2]].OFF();
+		postCircRuns = false;
 		start = time(0);
 		mainLog(logINFO, "Heating started, mode 1, Thermostat: " + to_string(*therm) + "°C");
 		mainPipeStartTemp = temperatureSensors[heatingSensors[2]].getTemp();
@@ -1457,6 +1462,19 @@ string Core::tempslogFirstRow() {
 	return x;
 }
 
+string Core::onePrecDegreeC(double number)
+{
+
+	std::ostringstream streamObj3;
+	streamObj3 << std::fixed;
+	streamObj3 << std::setprecision(1);
+	streamObj3 << number;
+	std::string strObj3 = streamObj3.str();
+
+
+	return strObj3;
+}
+
 int Core::getSensorMax(string sensorName)
 {
 	return temperatureSensors[getSensorNumber(sensorName)].getMax();
@@ -1509,7 +1527,7 @@ string Core::commFunc(string mes)
 		rep += "<getthermd> to get day thermostat\n";
 		rep += "<getwts> to get working times(heater, pumps)\n";
 		rep += "<gettdt> to get times, diff. end temperatures\n";
-		rep += "<gettemps> to get the actual temperatures\n";
+		rep += "<gettemps> to get the current temperatures\n";
 		rep += "<thermnight>=<value>, to set night thermostat\n";
 		rep += "<thermday>=<value> to set day thermostat\n";
 		rep += "<nstarttime>=<time in min> to set night start time\n";
@@ -2437,7 +2455,7 @@ string Core::getWT()
 	return x;
 }
 
-//NEW - gives back the devices' actual working times(hour:min) for the Android app
+//NEW - gives back the devices' current working times(hour:min) for the Android app
 //i should use a better way to handle these lines <dev.name> <time>!!!!
 string Core::newGetWT() {
 
@@ -2488,9 +2506,10 @@ int Core::setHeatingMode(int x)
 
 int Core::sendEmail(string type)
 {
-	string cmd = "python py.py";
-	cmd += type;
-	system(cmd.c_str());
+	//string cmd = "python py.py";
+	//string cmd = "python3 /home/pi/Desktop/pythongyak/email/gmail.py extend8987@gmail.com monocikli1991 nagda.91@gmail.com \'";
+	/*cmd += type + "\'";
+	system(cmd.c_str());*/
 	
 	return 0;
 }
@@ -2714,4 +2733,180 @@ int Core::deleteDevice(string x)
 			//Devices.erase(i);
 		}
 	return 0;
+}
+
+// Database handlers for the django backend
+
+void Core::updateValuesInDB() {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	std::string sqlCom;
+
+	const char* data = "Callback function called";
+
+	rc = sqlite3_open(DATABASEPATH, &db);
+
+	if (rc) mainLog(logERROR, "Cant\'t open database: " + string(sqlite3_errmsg(db)));
+
+	for (auto&& i : temperatureSensors) {
+
+		sqlCom.clear();
+
+		if (i.isUrl()) {
+			sqlCom = "UPDATE api_note SET temp = '" + i.getTempStr() + "C - " + i.getNote() + "', updated = datetime('now','localtime') WHERE body='" + i.getName() + "';";
+
+		}
+		else {
+			sqlCom = "UPDATE api_note SET temp = '" + i.getTempStr() + "C' , updated = datetime('now','localtime') WHERE body='" + i.getName() + "';";
+		}
+		const char* sql = sqlCom.c_str();
+
+		rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+		if (rc != SQLITE_OK) {
+			mainLog(logERROR, "SQL error: " + string(zErrMsg));
+			//fprintf(stderr, "SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+		}
+		else {
+			//fprintf(stdout, "Operation done successfully\n");
+		}
+
+	}
+
+	for (auto&& i : Devices) {
+		
+		sqlCom.clear();
+
+		sqlCom = "UPDATE api_note SET temp = '" + i.getOnOff() + "', updated = datetime('now','localtime') WHERE body='" + i.getName() + "';";
+
+		const char* sql = sqlCom.c_str();
+
+		rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+		if (rc != SQLITE_OK) {
+			mainLog(logERROR, "SQL error: " + string(zErrMsg));
+			sqlite3_free(zErrMsg);
+		}
+	}
+
+	sqlCom = "UPDATE api_thermostat SET temp = '" + onePrecDegreeC(double(thermostatDay)/1000) + "' WHERE ID=1;";
+	//UPDATE api_thermostat SET temp = '21000' WHERE name='Nappali hõmérséklet';
+	//UPDATE api_thermostat SET temp = '21000' WHERE ID='1';
+	const char* sql = sqlCom.c_str();
+
+	rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+	if (rc != SQLITE_OK) {
+		mainLog(logERROR, "SQL error: " + string(zErrMsg));
+		//fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+	}
+	else {
+		//fprintf(stdout, "Operation done successfully\n");
+	}
+
+	sqlCom = "UPDATE api_thermostat SET temp = '" + onePrecDegreeC(double(thermostatNight)/1000) + "' WHERE ID=2;";
+	sql = sqlCom.c_str();
+
+	rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+	if (rc != SQLITE_OK) {
+		mainLog(logERROR, "SQL error: " + string(zErrMsg));
+		//fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+	}
+	else {
+		//fprintf(stdout, "Operation done successfully\n");
+	}
+
+	sqlite3_close(db);
+
+}
+
+int Core::callback(void* data, int argc, char** argv, char** azColName) {
+	int i;
+	fprintf(stderr, "%s: ", (const char*)data);
+
+	for (i = 0; i < argc; i++) {
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+	}
+
+	printf("\n");
+	return 0;
+}
+
+void Core::sqlUpdate(string table, string updateColumn, string name, string identName, string newValue, bool vTemp, bool vDevices) {
+
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	std::string sqlCom;
+
+	const char* data = "Callback function called";
+
+	rc = sqlite3_open(DATABASEPATH, &db);
+
+	if (rc) mainLog(logERROR, "Cant\'t open database: " + string(sqlite3_errmsg(db)));
+
+	if (vTemp) {
+
+		for (auto&& i : temperatureSensors) {
+
+			sqlCom.clear();
+
+			if (i.isUrl()) sqlCom = "UPDATE api_note SET temp = '" + i.getTempStr() + "C - " + i.getNote() + "' WHERE body='" + i.getName() + "';";
+			else {
+				sqlCom = "UPDATE api_note SET temp = '" + i.getTempStr() + "C' WHERE body='" + i.getName() + "';";
+			}
+			const char* sql = sqlCom.c_str();
+
+			rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+			if (rc != SQLITE_OK) {
+				mainLog(logERROR, "SQL error: " + string(zErrMsg));
+				//fprintf(stderr, "SQL error: %s\n", zErrMsg);
+				sqlite3_free(zErrMsg);
+			}
+			else {
+				//fprintf(stdout, "Operation done successfully\n");
+			}
+		}
+	}
+	else if (vDevices) {
+
+		for (auto&& i : Devices) {
+
+			sqlCom.clear();
+
+			sqlCom = "UPDATE api_note SET temp = '" + i.getOnOff() + "' WHERE body='" + i.getName() + "';";
+
+			const char* sql = sqlCom.c_str();
+
+			rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+			if (rc != SQLITE_OK) {
+				mainLog(logERROR, "SQL error: " + string(zErrMsg));
+				sqlite3_free(zErrMsg);
+			}
+		}
+	}
+	else {
+
+		sqlCom = "UPDATE " + table + " SET " + updateColumn + " = '" + newValue + "' WHERE " + identName + "='" + name + "';";
+
+		const char* sql = sqlCom.c_str();
+
+		rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+
+		if (rc != SQLITE_OK) {
+			mainLog(logERROR, "SQL error: " + string(zErrMsg));
+			sqlite3_free(zErrMsg);
+		}
+
+	}
+
+	sqlite3_close(db);
+
 }

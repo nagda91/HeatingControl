@@ -16,7 +16,6 @@ Global
 		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Debug|ARM.Deploy.0 = Debug|ARM
 		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.ActiveCfg = Release|ARM
 		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.Build.0 = Release|ARM
-		{ACC71ACA-8B51-4601-9F8C-F238AC84A9B5}.Release|ARM.Deploy.0 = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

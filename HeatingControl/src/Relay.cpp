@@ -19,7 +19,7 @@ Relay::Relay(string namex, int pinNumber, bool &Test, bool &relayDebug) {
 	TEST = &Test;
 	PIN = pinNumber;
 	pinMode(PIN, OUTPUT);
-	digitalWrite(PIN, HIGH);
+	this->OFF;
 	changed = false;
 	debug = &relayDebug;
 }
@@ -29,6 +29,14 @@ Relay::~Relay(){}
 int Relay::getState() {
 
 	return digitalRead(PIN);
+}
+
+string Relay::getOnOff()
+{
+	if (!digitalRead(PIN))	return "ON";
+	else {
+		return "OFF";
+	}
 }
 
 int Relay::getPIN() {
@@ -174,4 +182,115 @@ void Relay::newDay()
 {
 	workingTime = 0;
 	WTs.clear();
+}
+
+
+
+//Functions for the GPIO set-up and control
+int Relay::pinMode(string mode) {
+	ofstream gpio;
+	ofstream* pgpio = &gpio;
+
+	if (openExport(*pgpio)) gpio.open(GPIOEXPORT);
+
+	
+	if (mode == "in") {
+		gpio.open((GPIOPATH + to_string(PIN) + GPIOMODE).c_str());
+
+		if (!gpio.fail()) {
+			gpio << "out";
+			gpio.close();
+			return SUCCESS;
+		}
+		else {
+			cout << "CANT OPEN FILE: " << GPIOPATH << to_string(PIN) << GPIOMODE << "\n";
+			return CANTOPENDIRECTIONFILE;
+		}
+	}
+	else if (mode == "out") {
+		gpio.open((GPIOPATH + to_string(PIN) + GPIOMODE).c_str());
+
+		if (!gpio.fail()) {
+			gpio << "out";
+			gpio.close();
+			return SUCCESS;
+		}
+		else {
+			cout << "CANT OPEN FILE: " << GPIOPATH << to_string(PIN) << GPIOMODE << "\n";
+			return CANTOPENDIRECTIONFILE;
+		}
+	}
+	else { return WRONGMODE; };
+}
+
+int Relay::setPinValue(int value) {
+	ofstream gpio;
+
+	gpio.open(GPIOEXPORT);
+
+	if (!gpio.fail()) {
+		gpio << PIN;
+		gpio.close();
+	}
+	else {
+		cout << "CANT OPEN FILE: " << GPIOEXPORT << "\n";
+		return CANTOPENEXPORTFILE;
+	}
+
+	if (!value) {
+		//Switch ON the relay
+		gpio.open((GPIOPATH + to_string(PIN) + GPIOVALUE).c_str());
+
+		if (!gpio.fail()) {
+			gpio << value;
+			gpio.close();
+			return SUCCESS;
+		}
+		else {
+			cout << "CANT OPEN FILE: " << GPIOPATH << to_string(PIN) << GPIOMODE << "\n";
+			return CANTOPENVALUEFILE;
+		}
+	}
+	else if (value) {
+		//Switch OFF the relay
+		gpio.open((GPIOPATH + to_string(PIN) + GPIOVALUE).c_str());
+
+		if (!gpio.fail()) {
+			gpio << value;
+			gpio.close();
+
+			return SUCCESS;
+		}
+		else {
+			cout << "CANT OPEN FILE: " << GPIOPATH << to_string(PIN) << GPIOMODE << "\n";
+			return CANTOPENVALUEFILE;
+		}
+	}
+	else { return WRONGMODE; };
+}
+
+int Relay::openExport(ofstream &gpio) {
+
+	gpio.open(GPIOEXPORT);
+
+	if (!gpio.fail()) {
+		return SUCCESS;
+	}
+	else {
+		cout << "CANT OPEN FILE: " << GPIOEXPORT << "\n";
+		return CANTOPENEXPORTFILE;
+	}
+}
+
+int Relay::openUnexport(ofstream& gpio) {
+
+	gpio.open(GPIOUNEXPORT);
+
+	if (!gpio.fail()) {
+		return SUCCESS;
+	}
+	else {
+		cout << "CANT OPEN FILE: " << GPIOUNEXPORT << "\n";
+		return CANTOPENUNEXPORTFILE;
+	}
 }

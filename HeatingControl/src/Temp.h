@@ -3,11 +3,12 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <string.h>
 #include <ctime>
 #include <sstream>
 #include <vector>
 #include <chrono>
-#include <wiringPi.h>
+#include <iomanip>
 
 using namespace std;
 
@@ -29,8 +30,8 @@ public:
 	virtual ~Temp();
 
 	//Functions for the 1Wire temperature sensors and the others
-	int tempGet();
 	int getTemp();
+	string getTempStr();
 	int szam(string);
 	void setTemp(int);
 	void setName(string);

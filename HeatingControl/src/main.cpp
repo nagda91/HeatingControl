@@ -5,33 +5,26 @@
 #include <time.h>
 #include <sstream>
 #include <vector>
-#include <wiringPi.h>
 #include <thread>
 #include <mosquittopp.h>
 #include <mosquitto.h>
 #include "Core.h"
 
-#define CLIENT_ID "Client_ID"
+//#define CLIENT_ID "Client_ID"
+//#define MQTT_PORT 1883;
+//#define MQTT_TOPIC "topic"
+//#define MQTT_USER "USER"
+//#define MQTT_PWD "PWD"
+
+#define CLIENT_ID "HeatingControl"
 #define MQTT_PORT 1883;
 #define MQTT_TOPIC "topic"
-#define MQTT_USER "USER"
-#define MQTT_PWD "PWD"
+#define MQTT_USER "thenewone"
+#define MQTT_PWD "1991"
 
 using namespace std;
 
 int main() {
-
-	/////wiringPi///// its not necessaary, but good to be here
-	wiringPiSetup();
-	pinMode(0, OUTPUT);
-	pinMode(1, OUTPUT);
-	pinMode(2, OUTPUT);
-	pinMode(3, OUTPUT);
-	digitalWrite(0, HIGH);
-	digitalWrite(1, HIGH);
-	digitalWrite(2, HIGH);
-	digitalWrite(3, HIGH);
-	/////wiringPi/////
 
 	////MQTT/////
 	class Core* iot_client;
@@ -58,12 +51,13 @@ int main() {
 		cout << "Waiting for command: ";
 		cin >> comm;
 
-		cout << iot_client->commFunc(comm) << endl;
-
 		if (comm == "exit") {
 			mainthread.join();
 			iot_client->disconnect();
 			cout << "Bye!\n";
+		}
+		else {
+			cout << iot_client->commFunc(comm) << "\n";
 		}
 	} while (comm != "exit");
 
