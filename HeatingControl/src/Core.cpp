@@ -14,9 +14,6 @@ Core::Core(const char* id, const char* host, int port, const char* user, const c
 	connect(host, port, keepalive);
 
 	//GPIOd
-	const char* chipname = "gpiochip0";
-	struct gpiod_chip* chip;
-
 	chip = gpiod_chip_open_by_name(chipname);
 	if (!chip) {
 		perror("Open chip for GPIO failed\n");
@@ -577,7 +574,7 @@ string Core::settingsFromFile()
 					name = row.substr(row.find(' ') + 1, row.find_last_of(' ') - row.find_first_of(' ') - 1);
 					pin = szam(row.substr(row.find_last_of(' ') + 1, row.length() - row.find_last_of(" ")));
 
-					Relay newRelay = Relay(name, pin, TEST, relayDebug);
+					Relay newRelay = Relay(chip, name, pin, TEST, relayDebug);
 
 					Devices.push_back(newRelay);
 
@@ -763,7 +760,7 @@ void Core::setTempsthread() {
 		if(!TEST) AIsamples();
 		if (!TEST) updateValuesInDB();
 
-		delay(1000);
+		//delay(1000);
 	}
 
 }
@@ -778,7 +775,7 @@ void Core::basicFunc() {
 	vector<int> day;
 
 	std::thread first = std::thread(&Core::setTempsthread, this);
-	delay(8000);
+	//delay(8000);
 
 	std::thread td_heatingFunc;
 
@@ -821,7 +818,7 @@ void Core::basicFunc() {
 							default: td_heatingFunc = std::thread(&Core::heaterFunc, this, thermostat);
 							}
 							heatingStartTime = time(0);
-							delay(500);
+							//delay(500);
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
 								heatingRuns = false;
@@ -891,7 +888,7 @@ void Core::basicFunc() {
 							}
 
 							heatingStartTime = time(0);
-							delay(500);
+							//delay(500);
 
 							if (td_heatingFunc.joinable()) {
 								td_heatingFunc.join();
@@ -951,7 +948,7 @@ void Core::basicFunc() {
 
 			}
 
-			delay(8500);
+			//delay(8500);
 
 		}
 		else {
@@ -994,7 +991,7 @@ void Core::basicFunc() {
 
 			}
 
-			delay(8500);
+			//delay(8500);
 		}
 	}
 
@@ -1039,7 +1036,7 @@ void Core::heaterFunc(int* therm) {
 					Devices[heatingDevices[0]].OFF();
 				}
 			}
-			delay(5000);
+			//delay(5000);
 
 			if (temperatureSensors[heatingSensors[2]].getTemp() < mainPipeStartTemp) mainPipeStartTemp = temperatureSensors[heatingSensors[2]].getTemp();
 
@@ -1771,7 +1768,7 @@ string Core::commFunc(string mes)
 	}
 	else if (mes.find("exit") != npos) {
 		STOP = false;
-		if (digitalRead(0) != 1) {
+		/*if (digitalRead(0) != 1) {
 			digitalWrite(0, HIGH);
 		}
 		if (digitalRead(1) != 1) {
@@ -1782,12 +1779,12 @@ string Core::commFunc(string mes)
 		}
 		if (digitalRead(3) != 1) {
 			digitalWrite(3, HIGH);
-		}
+		}*/
 		return "Application closing... ";
 	}
 	else if (mes.find("pause") != npos) {
 		OK = false;
-		if (digitalRead(0) != 1) {
+		/*if (digitalRead(0) != 1) {
 			digitalWrite(0, HIGH);
 		}
 		if (digitalRead(1) != 1) {
@@ -1798,7 +1795,7 @@ string Core::commFunc(string mes)
 		}
 		if (digitalRead(3) != 1) {
 			digitalWrite(3, HIGH);
-		}
+		}*/
 		return "mainthread is paused\n";
 	}
 	else if (mes.find("continue") != npos) {
@@ -1916,7 +1913,7 @@ string Core::commFunc(string mes)
 		cin >> gpio;
 		GPIO = szam(gpio);
 
-		Relay newRelay = Relay(deviceName, GPIO, TEST, relayDebug);
+		Relay newRelay = Relay(chip, deviceName, GPIO, TEST, relayDebug);
 		Devices.push_back(newRelay);
 
 		return "Device uploaded!";
@@ -2376,11 +2373,11 @@ void Core::AIsamples()
 		if (temperatureSensors[i].isUrl()) f << ";" << temperatureSensors[i].getNote();
 	}
 
-	f << ";";
+	/*f << ";";
 	f << digitalRead(0) << ";";
 	f << digitalRead(1) << ";";
 	f << digitalRead(2) << ";";
-	f << digitalRead(3) << ";";
+	f << digitalRead(3) << ";";*/
 	f.close();
 }
 
@@ -2428,13 +2425,13 @@ string Core::getGPIO()
 {
 	string x;
 	x += "gpio,0=";
-	x += to_string(digitalRead(0));
+	/*x += to_string(digitalRead(0));
 	x += ",1=";
 	x += to_string(digitalRead(1));
 	x += ",2=";
 	x += to_string(digitalRead(2));
 	x += ",3=";
-	x += to_string(digitalRead(3));
+	x += to_string(digitalRead(3));*/
 	return x;
 }
 

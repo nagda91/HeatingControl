@@ -40,15 +40,18 @@ Relay::~Relay(){}
 
 int Relay::getState() {
 
-	return digitalRead(PIN);
+	//return digitalRead(PIN);
+	return 1;
 }
 
 string Relay::getOnOff()
 {
-	if (!digitalRead(PIN))	return "ON";
+	/*if (!digitalRead(PIN))	return "ON";
 	else {
 		return "OFF";
-	}
+	}*/
+
+	return "OFF";
 }
 
 int Relay::getPIN() {
@@ -92,8 +95,15 @@ int Relay::getLastWT() {
 
 int Relay::ON() {
 
+	int ret;
+
 	if (digitalRead(PIN) != 0 && !*TEST) {
-		digitalWrite(PIN, LOW);
+		//digitalWrite(PIN, LOW);
+		ret = gpiod_line_set_value(this, 0);
+		if (ret < 0) {
+			perror("Set line output failed\n");
+			return 1;
+		}
 		START = time(0);
 		
 		if (*debug) cout << name << " -- ON" << endl;
@@ -106,8 +116,6 @@ int Relay::ON() {
 		}
 		else { return 1; }
 	}
-	if (*debug) cout << name << " -- it was ON" << endl;
-	return 1;
 }
 
 int Relay::OFF() {

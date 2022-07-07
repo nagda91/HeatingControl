@@ -249,6 +249,10 @@ private:
 			2 - boilerpump}*/
 	vector<int>		boilerHeatingDevicesSensors;
 
+	//GPIOd
+	const char* chipname = "gpiochip0";
+	struct gpiod_chip* chip;
+
 	//Functions
 
 	//give back the temperatures
